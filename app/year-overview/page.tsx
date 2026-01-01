@@ -1,12 +1,12 @@
 import { Navigation } from "@/components/navigation"
-import { AnnualCollage } from "@/components/annual-collage"
+import { YearOverview } from "@/components/year-overview"
 
-export default function HomePage() {
+export default function YearOverviewPage() {
   return (
     <>
       <Navigation />
       <main className="min-h-screen pt-16">
-        <AnnualCollage />
+        <YearOverview />
       </main>
     </>
   )
