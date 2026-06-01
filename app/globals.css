@@ -5,12 +5,24 @@
 
 /* Color palette: Vintage Berry, Grape Soda, Dusk Blue, Pacific Blue, Silver */
 :root {
-  /* Updated palette with proper color values */
+  /* Core palette */
   --vintage-berry: #92374d;
   --grape-soda: #8c5383;
   --dusk-blue: #4a5899;
   --pacific-blue: #559cad;
   --silver: #c1b2ab;
+
+  /* Extended palette — soft editorial seasonals */
+  --bronze-brown: #8b6f47;
+  --branded-melon: #d9846b;
+  --lemon-grass: #a8b080;
+  --primrose-pink: #e8b4b8;
+  --lyons-blue: #3e5c76;
+  --damson: #5c4a6e;
+  --winterberry: #a0383d;
+  --poppy-red: #c84a3a;
+  --chili-oil: #a85a3a;
+  --hot-chocolate: #5b3e2f;
 
   /* Base colors */
   --paper: #f9f7f5;
@@ -107,6 +119,24 @@
   --color-silver: var(--silver);
   --color-paper: var(--paper);
   --color-ink: var(--ink);
+
+  /* Short aliases used throughout the codebase */
+  --color-berry: var(--vintage-berry);
+  --color-grape: var(--grape-soda);
+  --color-dusk: var(--dusk-blue);
+  --color-pacific: var(--pacific-blue);
+
+  /* Extended palette tokens */
+  --color-bronze-brown: var(--bronze-brown);
+  --color-branded-melon: var(--branded-melon);
+  --color-lemon-grass: var(--lemon-grass);
+  --color-primrose-pink: var(--primrose-pink);
+  --color-lyons-blue: var(--lyons-blue);
+  --color-damson: var(--damson);
+  --color-winterberry: var(--winterberry);
+  --color-poppy-red: var(--poppy-red);
+  --color-chili-oil: var(--chili-oil);
+  --color-hot-chocolate: var(--hot-chocolate);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);

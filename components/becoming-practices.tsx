@@ -19,19 +19,23 @@ export function BecomingPractices({ month }: BecomingPracticesProps) {
   const [practices, setPractices] = useState<Practice[]>([])
   const [newPractice, setNewPractice] = useState("")
   const [isAdding, setIsAdding] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem(`practices-${month}`)
-    if (saved) {
-      setPractices(JSON.parse(saved))
+    try {
+      const saved = localStorage.getItem(`practices-${month}`)
+      if (saved) setPractices(JSON.parse(saved))
+      else setPractices([])
+    } catch {
+      setPractices([])
     }
+    setHydrated(true)
   }, [month])
 
   useEffect(() => {
-    if (practices.length > 0) {
-      localStorage.setItem(`practices-${month}`, JSON.stringify(practices))
-    }
-  }, [practices, month])
+    if (!hydrated) return
+    localStorage.setItem(`practices-${month}`, JSON.stringify(practices))
+  }, [practices, month, hydrated])
 
   const addPractice = () => {
     if (!newPractice.trim()) return

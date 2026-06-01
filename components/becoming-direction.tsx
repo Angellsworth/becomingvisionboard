@@ -10,23 +10,26 @@ interface BecomingDirectionProps {
 export function BecomingDirection({ month }: BecomingDirectionProps) {
   const [direction, setDirection] = useState("")
   const [isEditing, setIsEditing] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem(`direction-${month}`)
-    if (saved) {
-      setDirection(saved)
+    try {
+      const saved = localStorage.getItem(`direction-${month}`)
+      setDirection(saved ?? "")
+    } catch {
+      setDirection("")
     }
+    setHydrated(true)
   }, [month])
 
   useEffect(() => {
-    if (direction) {
-      localStorage.setItem(`direction-${month}`, direction)
-    }
-  }, [direction, month])
+    if (!hydrated) return
+    localStorage.setItem(`direction-${month}`, direction)
+  }, [direction, month, hydrated])
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="bg-card/50 backdrop-blur-sm rounded-lg p-8 border border-grape-soda/20">
+      <div className="bg-card/50 backdrop-blur-sm rounded-lg p-6 sm:p-8 border border-grape-soda/20">
         <div className="flex items-center gap-3 mb-6">
           <Sparkles className="w-6 h-6 text-pacific-blue" />
           <h2 className="font-serif text-2xl font-light text-ink">Becoming Direction</h2>
@@ -51,7 +54,7 @@ export function BecomingDirection({ month }: BecomingDirectionProps) {
               className="w-full px-4 py-3 bg-paper/50 border border-silver/20 rounded-md cursor-pointer hover:border-pacific-blue/50 transition-colors min-h-[100px] leading-relaxed"
             >
               {direction ? (
-                <p className="text-ink">{direction}</p>
+                <p className="text-ink whitespace-pre-wrap">{direction}</p>
               ) : (
                 <p className="text-grape-soda/60 italic">Click to write your becoming direction...</p>
               )}

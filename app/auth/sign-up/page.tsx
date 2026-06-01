@@ -25,6 +25,12 @@ export default function SignUpPage() {
     setIsLoading(true)
     setError(null)
 
+    if (!supabase) {
+      setError("Authentication is not configured. Add your Supabase keys to .env.local to enable sign-up.")
+      setIsLoading(false)
+      return
+    }
+
     if (password !== repeatPassword) {
       setError("Passwords do not match")
       setIsLoading(false)

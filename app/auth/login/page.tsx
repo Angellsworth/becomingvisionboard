@@ -24,6 +24,12 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
+    if (!supabase) {
+      setError("Authentication is not configured. Add your Supabase keys to .env.local to enable login.")
+      setIsLoading(false)
+      return
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,

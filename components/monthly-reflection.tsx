@@ -14,19 +14,23 @@ export function MonthlyReflection({ month }: MonthlyReflectionProps) {
     resisted: "",
     adjust: "",
   })
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem(`reflection-${month}`)
-    if (saved) {
-      setReflections(JSON.parse(saved))
+    try {
+      const saved = localStorage.getItem(`reflection-${month}`)
+      if (saved) setReflections(JSON.parse(saved))
+      else setReflections({ helped: "", resisted: "", adjust: "" })
+    } catch {
+      // ignore
     }
+    setHydrated(true)
   }, [month])
 
   useEffect(() => {
-    if (reflections.helped || reflections.resisted || reflections.adjust) {
-      localStorage.setItem(`reflection-${month}`, JSON.stringify(reflections))
-    }
-  }, [reflections, month])
+    if (!hydrated) return
+    localStorage.setItem(`reflection-${month}`, JSON.stringify(reflections))
+  }, [reflections, month, hydrated])
 
   return (
     <div className="max-w-3xl mx-auto">
