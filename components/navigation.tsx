@@ -7,12 +7,15 @@ import { Home, Calendar, CalendarDays, LogOut, Menu, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createBrowserClient, hasSupabaseEnv } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
+import { useYear } from "@/components/year-provider"
+import { YearSelector } from "@/components/year-selector"
 
 export function Navigation() {
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const authEnabled = hasSupabaseEnv()
+  const { year } = useYear()
 
   useEffect(() => {
     if (!authEnabled) return
@@ -58,12 +61,13 @@ export function Navigation() {
         <div className="flex items-center justify-between h-16">
           <Link href={showAppLinks ? "/home" : "/"} className="flex items-center gap-3">
             <h1 className="font-serif text-xl sm:text-2xl font-light tracking-wide text-ink">
-              Becoming 2026
+              Becoming <span className="tabular-nums">{year}</span>
             </h1>
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-2">
+            {showAppLinks && <YearSelector />}
             {showAppLinks && (
               <>
                 <Link href="/home" className={linkClass(isActive("/home"))}>
@@ -121,6 +125,11 @@ export function Navigation() {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden pb-4 flex flex-col gap-1 border-t border-silver/30 pt-3">
+            {showAppLinks && (
+              <div className="flex justify-center pb-2">
+                <YearSelector />
+              </div>
+            )}
             {showAppLinks && (
               <>
                 <Link href="/home" onClick={() => setMobileOpen(false)} className={linkClass(isActive("/home"))}>

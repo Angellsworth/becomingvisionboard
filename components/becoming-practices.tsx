@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { Plus, X, Circle, CheckCircle2, Pause } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useYear } from "@/components/year-provider"
+import { keys } from "@/lib/year"
 
 interface Practice {
   id: string
@@ -16,26 +18,30 @@ interface BecomingPracticesProps {
 }
 
 export function BecomingPractices({ month }: BecomingPracticesProps) {
+  const { year, ready } = useYear()
+  const storageKey = keys.practices(month, year)
+
   const [practices, setPractices] = useState<Practice[]>([])
   const [newPractice, setNewPractice] = useState("")
   const [isAdding, setIsAdding] = useState(false)
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
+    if (!ready) return
+    setHydrated(false)
     try {
-      const saved = localStorage.getItem(`practices-${month}`)
-      if (saved) setPractices(JSON.parse(saved))
-      else setPractices([])
+      const saved = localStorage.getItem(storageKey)
+      setPractices(saved ? JSON.parse(saved) : [])
     } catch {
       setPractices([])
     }
     setHydrated(true)
-  }, [month])
+  }, [storageKey, ready])
 
   useEffect(() => {
     if (!hydrated) return
-    localStorage.setItem(`practices-${month}`, JSON.stringify(practices))
-  }, [practices, month, hydrated])
+    localStorage.setItem(storageKey, JSON.stringify(practices))
+  }, [practices, storageKey, hydrated])
 
   const addPractice = () => {
     if (!newPractice.trim()) return

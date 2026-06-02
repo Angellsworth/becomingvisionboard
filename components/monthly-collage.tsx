@@ -4,6 +4,8 @@ import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useYear } from "@/components/year-provider"
+import { keys } from "@/lib/year"
 
 interface CollageImage {
   id: string
@@ -21,6 +23,9 @@ interface MonthlyCollageProps {
 }
 
 export function MonthlyCollage({ month }: MonthlyCollageProps) {
+  const { year, ready } = useYear()
+  const storageKey = keys.monthlyCollage(month, year)
+
   const [images, setImages] = useState<CollageImage[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [hydrated, setHydrated] = useState(false)
@@ -28,20 +33,21 @@ export function MonthlyCollage({ month }: MonthlyCollageProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (!ready) return
+    setHydrated(false)
     try {
-      const saved = localStorage.getItem(`collage-${month}`)
-      if (saved) setImages(JSON.parse(saved))
-      else setImages([])
+      const saved = localStorage.getItem(storageKey)
+      setImages(saved ? JSON.parse(saved) : [])
     } catch {
       setImages([])
     }
     setHydrated(true)
-  }, [month])
+  }, [storageKey, ready])
 
   useEffect(() => {
     if (!hydrated) return
-    localStorage.setItem(`collage-${month}`, JSON.stringify(images))
-  }, [images, month, hydrated])
+    localStorage.setItem(storageKey, JSON.stringify(images))
+  }, [images, storageKey, hydrated])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()

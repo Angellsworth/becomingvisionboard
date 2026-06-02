@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, ImageIcon } from "lucide-react"
+import { useYear } from "@/components/year-provider"
+import { keys } from "@/lib/year"
 
 interface CollageImage {
   id: string
@@ -40,17 +42,29 @@ const MONTHS = [
 ]
 
 export function YearOverview() {
+  const { year, ready } = useYear()
   const [monthsData, setMonthsData] = useState<MonthData[]>([])
 
   useEffect(() => {
-    // Load data from localStorage for all months
+    if (!ready) return
+    // Load data from localStorage for all months of the selected year
     const data = MONTHS.map((month) => {
-      const imagesStr = localStorage.getItem(`collage-${month.slug}`)
-      const direction = localStorage.getItem(`direction-${month.slug}`) || ""
-      const practicesStr = localStorage.getItem(`practices-${month.slug}`)
+      const imagesStr = localStorage.getItem(keys.monthlyCollage(month.slug, year))
+      const direction = localStorage.getItem(keys.direction(month.slug, year)) || ""
+      const practicesStr = localStorage.getItem(keys.practices(month.slug, year))
 
-      const images: CollageImage[] = imagesStr ? JSON.parse(imagesStr) : []
-      const practices = practicesStr ? JSON.parse(practicesStr) : []
+      let images: CollageImage[] = []
+      try {
+        images = imagesStr ? JSON.parse(imagesStr) : []
+      } catch {
+        images = []
+      }
+      let practices: unknown[] = []
+      try {
+        practices = practicesStr ? JSON.parse(practicesStr) : []
+      } catch {
+        practices = []
+      }
 
       return {
         slug: month.slug,
@@ -63,14 +77,16 @@ export function YearOverview() {
     })
 
     setMonthsData(data)
-  }, [])
+  }, [year, ready])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-paper via-lemon-grass/10 to-primrose-pink/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl font-light text-ink mb-4">Year Overview</h1>
+          <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl font-light text-ink mb-4">
+            Year Overview <span className="text-bronze-brown">{year}</span>
+          </h1>
           <p className="text-bronze-brown text-lg">The evolution of your becoming</p>
         </div>
 

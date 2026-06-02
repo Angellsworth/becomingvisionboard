@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Cormorant_Garamond } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { YearProvider } from "@/components/year-provider"
 import "./globals.css"
 
 const inter = Inter({
@@ -15,7 +16,7 @@ const cormorant = Cormorant_Garamond({
 })
 
 export const metadata: Metadata = {
-  title: "Becoming 2026",
+  title: "Becoming",
   description: "A becoming tracker for the small, repeatable baby steps that lead toward transformation",
   generator: "v0.app",
   icons: {
@@ -45,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className={`font-sans antialiased`}>
-        {children}
+        <YearProvider>{children}</YearProvider>
         <Analytics />
       </body>
     </html>

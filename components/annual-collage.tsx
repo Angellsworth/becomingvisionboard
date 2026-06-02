@@ -4,6 +4,8 @@ import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useYear } from "@/components/year-provider"
+import { keys } from "@/lib/year"
 
 interface CollageImage {
   id: string
@@ -16,10 +18,11 @@ interface CollageImage {
   zIndex: number
 }
 
-const STORAGE_KEY = "collage-annual-2026"
-const THEME_KEY = "annual-theme-2026"
-
 export function AnnualCollage() {
+  const { year, ready } = useYear()
+  const storageKey = keys.annualCollage(year)
+  const themeKey = keys.annualTheme(year)
+
   const [images, setImages] = useState<CollageImage[]>([])
   const [annualTheme, setAnnualTheme] = useState("Transformation")
   const [isDragOver, setIsDragOver] = useState(false)
@@ -28,29 +31,32 @@ export function AnnualCollage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
 
-  // Load from localStorage on mount
+  // Reload from localStorage whenever the active year changes
   useEffect(() => {
+    if (!ready) return
+    setHydrated(false)
     try {
-      const savedImages = localStorage.getItem(STORAGE_KEY)
-      const savedTheme = localStorage.getItem(THEME_KEY)
-      if (savedImages) setImages(JSON.parse(savedImages))
-      if (savedTheme) setAnnualTheme(savedTheme)
+      const savedImages = localStorage.getItem(storageKey)
+      const savedTheme = localStorage.getItem(themeKey)
+      setImages(savedImages ? JSON.parse(savedImages) : [])
+      setAnnualTheme(savedTheme ?? "Transformation")
     } catch {
-      // ignore corrupt storage
+      setImages([])
+      setAnnualTheme("Transformation")
     }
     setHydrated(true)
-  }, [])
+  }, [storageKey, themeKey, ready])
 
   // Persist on change (after hydration so we don't overwrite saved data with defaults)
   useEffect(() => {
     if (!hydrated) return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(images))
-  }, [images, hydrated])
+    localStorage.setItem(storageKey, JSON.stringify(images))
+  }, [images, hydrated, storageKey])
 
   useEffect(() => {
     if (!hydrated) return
-    localStorage.setItem(THEME_KEY, annualTheme)
-  }, [annualTheme, hydrated])
+    localStorage.setItem(themeKey, annualTheme)
+  }, [annualTheme, hydrated, themeKey])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -118,7 +124,7 @@ export function AnnualCollage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="text-center mb-8 sm:mb-12 space-y-3 sm:space-y-4">
           <h1 className="font-serif text-5xl sm:text-7xl md:text-8xl font-light tracking-wide text-ink">
-            BECOMING 2026
+            BECOMING {year}
           </h1>
           {editingTheme ? (
             <input

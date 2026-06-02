@@ -3,6 +3,7 @@ import { MonthlyCollage } from "./monthly-collage"
 import { BecomingDirection } from "./becoming-direction"
 import { BecomingPractices } from "./becoming-practices"
 import { MonthlyReflection } from "./monthly-reflection"
+import { useYear } from "./year-provider"
 
 interface MonthlyViewProps {
   month: string
@@ -10,6 +11,7 @@ interface MonthlyViewProps {
 
 export function MonthlyView({ month }: MonthlyViewProps) {
   const monthName = month.charAt(0).toUpperCase() + month.slice(1)
+  const { year } = useYear()
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-paper via-primrose-pink/10 to-lemon-grass/10">
@@ -17,7 +19,7 @@ export function MonthlyView({ month }: MonthlyViewProps) {
         {/* Month Header */}
         <div className="text-center mb-12">
           <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl font-light text-ink mb-2">{monthName}</h1>
-          <p className="text-bronze-brown text-lg">2026</p>
+          <p className="text-bronze-brown text-lg">{year}</p>
         </div>
 
         {/* Monthly Collage */}

@@ -2,12 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react"
+import { useYear } from "@/components/year-provider"
+import { keys } from "@/lib/year"
 
 interface MonthlyReflectionProps {
   month: string
 }
 
 export function MonthlyReflection({ month }: MonthlyReflectionProps) {
+  const { year, ready } = useYear()
+  const storageKey = keys.reflection(month, year)
+
   const [isOpen, setIsOpen] = useState(false)
   const [reflections, setReflections] = useState({
     helped: "",
@@ -17,20 +22,21 @@ export function MonthlyReflection({ month }: MonthlyReflectionProps) {
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
+    if (!ready) return
+    setHydrated(false)
     try {
-      const saved = localStorage.getItem(`reflection-${month}`)
-      if (saved) setReflections(JSON.parse(saved))
-      else setReflections({ helped: "", resisted: "", adjust: "" })
+      const saved = localStorage.getItem(storageKey)
+      setReflections(saved ? JSON.parse(saved) : { helped: "", resisted: "", adjust: "" })
     } catch {
-      // ignore
+      setReflections({ helped: "", resisted: "", adjust: "" })
     }
     setHydrated(true)
-  }, [month])
+  }, [storageKey, ready])
 
   useEffect(() => {
     if (!hydrated) return
-    localStorage.setItem(`reflection-${month}`, JSON.stringify(reflections))
-  }, [reflections, month, hydrated])
+    localStorage.setItem(storageKey, JSON.stringify(reflections))
+  }, [reflections, storageKey, hydrated])
 
   return (
     <div className="max-w-3xl mx-auto">
