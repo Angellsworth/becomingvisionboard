@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from "react"
 import { Feather, Flower2, Sparkles, Target } from "lucide-react"
 import {
   beeCountFor,
+  buildGardenItems,
   computeGardenStats,
   houseStageFor,
+  ITEM_EYEBROW,
   phaseFor,
+  type GardenItem,
   type GardenStats,
 } from "@/lib/data/garden-state"
 import { startMusic, stopMusic, onMusicLoadState } from "@/lib/audio/engine"
@@ -29,12 +32,15 @@ import { useAudio } from "@/components/audio-provider"
  */
 export function MemoryGarden() {
   const [stats, setStats] = useState<GardenStats | null>(null)
+  const [items, setItems] = useState<GardenItem[]>([])
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [musicLoaded, setMusicLoaded] = useState<boolean | null>(null)
   const { enabled: audioEnabled } = useAudio()
 
   // Compute after mount — keeps SSR and CSR markup consistent.
   useEffect(() => {
     setStats(computeGardenStats())
+    setItems(buildGardenItems())
   }, [])
 
   // Start/stop the music with the page and the audio toggle.
@@ -63,20 +69,22 @@ export function MemoryGarden() {
   const beeCount = beeCountFor(tokens)
   const houseStage = houseStageFor(tokens)
 
-  // How many flower slots to fill. Capped at the spot list length.
-  const visibleFlowers = useMemo(() => {
-    return Math.min(tokens, FLOWER_SPOTS.length)
-  }, [tokens])
-
-  // Render flowers back-to-front (sorted by y ascending) so closer
-  // blooms layer on top. Stable keys via original spot index.
-  const renderedFlowers = useMemo(() => {
-    const visible = FLOWER_SPOTS.slice(0, visibleFlowers).map((spot, idx) => ({
-      ...spot,
-      idx,
+  // Pair each item with a flower spot (front-first), capped at spot count.
+  // Render back-to-front so closer blooms layer on top. Stable keys via item id.
+  const placedItems = useMemo(() => {
+    return items.slice(0, FLOWER_SPOTS.length).map((item, idx) => ({
+      item,
+      spot: FLOWER_SPOTS[idx],
     }))
-    return visible.sort((a, b) => a.y - b.y)
-  }, [visibleFlowers])
+  }, [items])
+
+  const renderedItems = useMemo(() => {
+    return [...placedItems].sort((a, b) => a.spot.y - b.spot.y)
+  }, [placedItems])
+
+  const hoveredEntry = hoveredId
+    ? placedItems.find((p) => p.item.id === hoveredId)
+    : null
 
   return (
     <div className="max-w-5xl mx-auto px-5 md:px-8 pt-6 md:pt-10 pb-24 md:pb-16">
@@ -109,6 +117,7 @@ export function MemoryGarden() {
           viewBox="0 0 1000 500"
           preserveAspectRatio="xMidYMid slice"
           className="absolute inset-0 w-full h-full"
+          onClick={() => setHoveredId(null)}
         >
           <defs>
             <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -222,17 +231,39 @@ export function MemoryGarden() {
             )
           })}
 
-          {/* Flowers, back-to-front */}
-          {renderedFlowers.map((spot) => (
-            <Flower
-              key={spot.idx}
-              x={spot.x}
-              y={spot.y}
-              type={spot.type}
-              scale={spot.scale}
-              color={FLOWER_COLORS[spot.colorIdx % FLOWER_COLORS.length]}
-            />
-          ))}
+          {/* Flowers — each one is a real item from the rest of the app.
+              Hover (desktop) or tap (mobile) reveals what it represents. */}
+          {renderedItems.map(({ item, spot }) => {
+            // Items can override the spot's default flower type when they have
+            // their own semantic (e.g. completed projects always render as
+            // tulips). Otherwise, fall back to the spot's deterministic type.
+            const flowerType = item.flowerType
+            const scale = spot.scale * item.scale
+            const isHovered = hoveredId === item.id
+            return (
+              <g
+                key={item.id}
+                onMouseEnter={() => setHoveredId(item.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setHoveredId((prev) => (prev === item.id ? null : item.id))
+                }}
+                style={{ cursor: "pointer" }}
+                role="button"
+                aria-label={`${ITEM_EYEBROW[item.type]}: ${item.title}`}
+              >
+                <Flower
+                  x={spot.x}
+                  y={spot.y}
+                  type={flowerType}
+                  scale={scale}
+                  color={item.tint}
+                  highlighted={isHovered}
+                />
+              </g>
+            )
+          })}
 
           {/* Bees, on top */}
           {Array.from({ length: beeCount }).map((_, i) => (
@@ -249,6 +280,14 @@ export function MemoryGarden() {
               "inset 0 0 80px color-mix(in srgb, var(--primary) 12%, transparent)",
           }}
         />
+
+        {/* ─── Hover/tap tooltip ─── */}
+        {hoveredEntry && (
+          <FlowerTooltip
+            item={hoveredEntry.item}
+            spot={hoveredEntry.spot}
+          />
+        )}
       </div>
 
       {/* ─── Whisper + phase ─── */}
@@ -259,6 +298,11 @@ export function MemoryGarden() {
         <p className="font-serif italic text-xl md:text-2xl text-foreground/85 max-w-xl mx-auto">
           {ready ? phase.whisper : "…"}
         </p>
+        {ready && placedItems.length > 0 && (
+          <p className="mt-4 text-[10px] tracking-[0.3em] uppercase text-foreground/35">
+            Hover or tap a bloom
+          </p>
+        )}
       </div>
 
       {/* ─── Music hint (only when audio is on and the file isn't loaded) ─── */}
@@ -376,6 +420,54 @@ export function MemoryGarden() {
           100% { transform: translate(260px, 320px); }
         }
       `}</style>
+    </div>
+  )
+}
+
+// --- Tooltip overlay ----------------------------------------------------
+
+interface FlowerTooltipProps {
+  item: GardenItem
+  spot: FlowerSpot
+}
+
+function FlowerTooltip({ item, spot }: FlowerTooltipProps) {
+  // Tooltip anchors just above the bloom (≈ spot.y - 36 in SVG coords).
+  // Clamp horizontally so it doesn't run off the rounded card edges.
+  const xPct = (spot.x / 1000) * 100
+  const yPct = ((spot.y - 36) / 500) * 100
+  const clampedX = Math.max(14, Math.min(86, xPct))
+  return (
+    <div
+      className="pointer-events-none absolute z-10 animate-in fade-in slide-in-from-bottom-1 duration-150"
+      style={{
+        left: `${clampedX}%`,
+        top: `${yPct}%`,
+        transform: "translate(-50%, calc(-100% - 12px))",
+      }}
+    >
+      <div className="rounded-xl bg-background/95 backdrop-blur-sm border border-border shadow-lg px-3.5 py-2.5 max-w-[240px]">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className="w-1.5 h-1.5 rounded-full shrink-0"
+            style={{
+              backgroundColor: item.tint.startsWith("var(") ? "var(--primary)" : item.tint,
+            }}
+            aria-hidden
+          />
+          <span className="text-[9px] tracking-[0.3em] uppercase text-foreground/55">
+            {item.subtitle}
+          </span>
+        </div>
+        <p className="font-serif text-base text-foreground leading-snug">
+          {item.title}
+        </p>
+      </div>
+      {/* Tiny pointer triangle */}
+      <div
+        aria-hidden
+        className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45 bg-background/95 border-r border-b border-border"
+      />
     </div>
   )
 }
@@ -613,17 +705,31 @@ const FLOWER_COLORS = [
 interface FlowerProps {
   x: number
   y: number
-  type: 0 | 1 | 2 | 3
+  type: 0 | 1 | 2 | 3 | 4
   scale: number
   color: string
+  /** When true, a soft glow ring renders behind the bloom (hover state). */
+  highlighted?: boolean
 }
 
-function Flower({ x, y, type, scale, color }: FlowerProps) {
+function Flower({ x, y, type, scale, color, highlighted }: FlowerProps) {
   const stemColor = "color-mix(in srgb, var(--accent) 75%, black)"
-  const stemHeight = 36
+  // Sprouts have a slightly shorter stem so the bud sits lower — they read
+  // as not-yet-bloomed rather than as small flowers.
+  const stemHeight = type === 4 ? 24 : 36
 
   return (
     <g transform={`translate(${x} ${y}) scale(${scale})`}>
+      {/* Hover glow halo behind the head */}
+      {highlighted && (
+        <circle
+          cx={0}
+          cy={-stemHeight}
+          r={18}
+          fill={color}
+          opacity={0.25}
+        />
+      )}
       <line
         x1="0"
         y1="0"
@@ -639,13 +745,21 @@ function Flower({ x, y, type, scale, color }: FlowerProps) {
         {type === 1 && <Daisy color={color} />}
         {type === 2 && <Cluster color={color} />}
         {type === 3 && <Round color={color} />}
+        {type === 4 && <Sprout color={color} />}
       </g>
-      {/* A leaf */}
+      {/* A leaf — sprouts get a smaller leaf and an extra one for greenery */}
       <path
         d={`M 0 -${stemHeight * 0.45} Q 7 -${stemHeight * 0.55}, 6 -${stemHeight * 0.35} Q 2 -${stemHeight * 0.4}, 0 -${stemHeight * 0.45} Z`}
         fill={stemColor}
         opacity={0.7}
       />
+      {type === 4 && (
+        <path
+          d={`M 0 -${stemHeight * 0.7} Q -7 -${stemHeight * 0.8}, -6 -${stemHeight * 0.6} Q -2 -${stemHeight * 0.65}, 0 -${stemHeight * 0.7} Z`}
+          fill={stemColor}
+          opacity={0.7}
+        />
+      )}
     </g>
   )
 }
@@ -701,6 +815,25 @@ function Round({ color }: { color: string }) {
     <>
       <circle r={7} fill={color} />
       <circle r={3} fill="color-mix(in srgb, var(--secondary) 60%, white)" />
+    </>
+  )
+}
+
+// A closed bud / sprout — used for active projects ("tending"), promises of
+// future blooms. Tighter and smaller than the open flower forms.
+function Sprout({ color }: { color: string }) {
+  return (
+    <>
+      <path
+        d="M -4 0 Q -5 -10, 0 -10 Q 5 -10, 4 0 Z"
+        fill={color}
+        opacity={0.9}
+      />
+      <path
+        d="M -2 -1 Q -2.5 -8, 0 -8 Q 2.5 -8, 2 -1 Z"
+        fill="color-mix(in srgb, var(--background) 35%, transparent)"
+        opacity={0.5}
+      />
     </>
   )
 }

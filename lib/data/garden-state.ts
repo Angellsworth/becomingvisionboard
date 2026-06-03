@@ -124,3 +124,189 @@ export function beeCountFor(tokens: number): number {
   if (tokens < 38) return 3
   return 4
 }
+
+// ===========================================================
+// Garden items — flowers that mean something
+// ===========================================================
+
+/** Where this item came from in the rest of the app. */
+export type GardenItemType = "complete" | "milestone" | "reflection" | "tending"
+
+export interface GardenItem {
+  id: string
+  type: GardenItemType
+  /** The main label shown in the hover tooltip. */
+  title: string
+  /** Smaller secondary line (category, date, etc.). */
+  subtitle: string
+  /** Hex color or CSS variable string for the flower fill. */
+  tint: string
+  /** Which flower shape: 0 tulip, 1 daisy, 2 cluster, 3 round, 4 sprout/bud. */
+  flowerType: 0 | 1 | 2 | 3 | 4
+  /** Base scale multiplier on top of the flower spot's own scale. */
+  scale: number
+}
+
+// Category tints duplicated here from projects.ts to keep the garden
+// independent of the projects module's React hook ergonomics. Tints
+// stay fixed across palettes — a category's colour is part of its meaning.
+const CATEGORY_INFO: Record<
+  string,
+  { label: string; tint: string }
+> = {
+  fitness: { label: "Fitness", tint: "#7c9468" },
+  wellness: { label: "Wellness", tint: "#95a87a" },
+  home: { label: "Home", tint: "#c47a5d" },
+  career: { label: "Career", tint: "#b8924e" },
+  creative: { label: "Creative", tint: "#92374d" },
+  travel: { label: "Travel", tint: "#d9a5a8" },
+  financial: { label: "Money", tint: "#e3c47a" },
+  relationships: { label: "People", tint: "#e8b4b8" },
+  other: { label: "Other", tint: "#b5b89c" },
+}
+
+function prettyShortDate(iso: string): string {
+  try {
+    const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10))
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    })
+  } catch {
+    return iso
+  }
+}
+
+interface RawProject {
+  id?: string
+  title?: string
+  status?: string
+  category?: string
+  updatedAt?: number
+  milestones?: Array<{ id?: string; text?: string; done?: boolean }>
+}
+interface RawJournal {
+  id?: string
+  body?: string
+  prompt?: string
+  isoDate?: string
+  updatedAt?: number
+}
+
+/**
+ * Build the prioritized list of items that appear as flowers in the garden.
+ * Read directly from localStorage so the garden always reflects the rest
+ * of the app's truth.
+ *
+ * Priority order (newest first within each bucket):
+ *  1. Completed projects   — biggest, front-most blooms
+ *  2. Done milestones      — supportive blooms in the parent project's colour
+ *  3. Reflections (any entry with content)
+ *  4. Active projects      — sprouts / buds (promises of future blooms)
+ *
+ * Sliced to the caller — typically capped to the number of flower spots.
+ */
+export function buildGardenItems(): GardenItem[] {
+  if (typeof window === "undefined") return []
+
+  let projects: RawProject[] = []
+  try {
+    const raw = localStorage.getItem("becoming-projects")
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) projects = parsed
+    }
+  } catch {
+    // ignore
+  }
+
+  let journal: RawJournal[] = []
+  try {
+    const raw = localStorage.getItem("becoming-journal")
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) journal = parsed
+    }
+  } catch {
+    // ignore
+  }
+
+  const items: GardenItem[] = []
+
+  // 1. Completed projects — newest first
+  const completed = projects
+    .filter((p) => p?.status === "completed")
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+  for (const p of completed) {
+    const cat = CATEGORY_INFO[p.category ?? "other"] ?? CATEGORY_INFO.other
+    items.push({
+      id: `complete-${p.id}`,
+      type: "complete",
+      title: p.title || "A completed thread",
+      subtitle: `Complete · ${cat.label}`,
+      tint: cat.tint,
+      flowerType: 0, // tulip
+      scale: 1.0,
+    })
+  }
+
+  // 2. Done milestones — newest projects' milestones first
+  const sortedProjects = [...projects].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+  for (const p of sortedProjects) {
+    const cat = CATEGORY_INFO[p.category ?? "other"] ?? CATEGORY_INFO.other
+    for (const m of p.milestones ?? []) {
+      if (!m?.done) continue
+      items.push({
+        id: `milestone-${p.id}-${m.id}`,
+        type: "milestone",
+        title: m.text || "A milestone",
+        subtitle: p.title ? `Milestone in ${p.title}` : `In ${cat.label}`,
+        tint: cat.tint,
+        flowerType: 1, // daisy
+        scale: 0.9,
+      })
+    }
+  }
+
+  // 3. Reflections — newest first
+  const reflections = [...journal]
+    .filter((e) => (e?.body ?? "").trim().length > 0)
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+  for (const e of reflections) {
+    items.push({
+      id: `reflection-${e.id}`,
+      type: "reflection",
+      title: e.prompt || "A free page",
+      subtitle: e.isoDate ? `Reflection · ${prettyShortDate(e.isoDate)}` : "Reflection",
+      tint: "var(--secondary)",
+      flowerType: 2, // cluster
+      scale: 0.9,
+    })
+  }
+
+  // 4. Active projects — newest first, shown as sprouts
+  const active = projects
+    .filter((p) => p?.status === "active")
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+  for (const p of active) {
+    const cat = CATEGORY_INFO[p.category ?? "other"] ?? CATEGORY_INFO.other
+    items.push({
+      id: `tending-${p.id}`,
+      type: "tending",
+      title: p.title || "In progress",
+      subtitle: `Tending · ${cat.label}`,
+      tint: cat.tint,
+      flowerType: 4, // sprout
+      scale: 0.75,
+    })
+  }
+
+  return items
+}
+
+export const ITEM_EYEBROW: Record<GardenItemType, string> = {
+  complete: "Complete",
+  milestone: "Milestone",
+  reflection: "Reflection",
+  tending: "Tending",
+}
