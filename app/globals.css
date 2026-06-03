@@ -3,16 +3,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Color palette: Vintage Berry, Grape Soda, Dusk Blue, Pacific Blue, Silver */
+/* ============================================================
+   Becoming — Multi-palette editorial system
+   Each user picks a palette in their profile. The chosen palette
+   replaces semantic tokens (--background, --foreground, --primary,
+   --secondary, --accent, etc.) on the <html> element. Dark mode
+   overrides layer on top.
+   ============================================================ */
+
+/* ============================================================
+   LEGACY tokens — kept for components that haven't been migrated
+   to semantic tokens yet. Same values in every palette.
+   ============================================================ */
 :root {
-  /* Core palette */
   --vintage-berry: #92374d;
   --grape-soda: #8c5383;
   --dusk-blue: #4a5899;
   --pacific-blue: #559cad;
   --silver: #c1b2ab;
-
-  /* Extended palette — soft editorial seasonals */
   --bronze-brown: #8b6f47;
   --branded-melon: #d9846b;
   --lemon-grass: #a8b080;
@@ -24,72 +32,237 @@
   --chili-oil: #a85a3a;
   --hot-chocolate: #5b3e2f;
 
-  /* Base colors */
-  --paper: #f9f7f5;
-  --ink: #2b2826;
+  /* Editorial named colors used by some new components.
+     These don't shift between palettes — keep them as fixed reference colors. */
+  --cream: #faf6ed;
+  --cream-warm: #f3ebd9;
+  --bone: #efe7d7;
+  --brass: #b8924e;
+  --brass-deep: #8d6f3a;
+  --brass-luminous: #d4a85e;
+  --aubergine: #3d2540;
+  --aubergine-deep: #2a1929;
+  --aubergine-velvet: #1f1b2e;
+  --midnight: #1a1626;
+  --terracotta: #c47a5d;
+  --sage: #b5b89c;
+  --sage-deep: #8a8d72;
+  --dusty-rose: #d9a5a8;
+  --dusty-rose-luminous: #e8c6c9;
+  --honey: #e3c47a;
 
-  /* Semantic tokens now use the brighter colors prominently */
-  --background: var(--paper);
-  --foreground: var(--ink);
+  --paper: var(--cream);
+  --ink: var(--aubergine-deep);
+
+  --radius: 0.875rem;
+}
+
+/* ============================================================
+   PALETTE: PEONY  (default, vibrant feminine florals)
+   Soft pink × marigold × sage × cream. Cottagecore luxe.
+   ============================================================ */
+:root,
+.palette-peony {
+  --p-bg: #fcf5ec;            /* warm cream */
+  --p-bg-deep: #f3e6d4;
+  --p-card: #ffffff;
+  --p-ink: #4a2640;           /* deep plum text */
+  --p-ink-soft: #6b4759;
+  --p-primary: #d9617c;       /* peony pink */
+  --p-primary-deep: #b94a64;
+  --p-secondary: #e8b34f;     /* marigold */
+  --p-secondary-deep: #c89432;
+  --p-accent: #95a87a;        /* fresh sage */
+  --p-muted: #f2e6dc;
+  --p-muted-fg: #8a6678;
+  --p-border: color-mix(in srgb, #d9617c 28%, transparent);
+
+  --background: var(--p-bg);
+  --foreground: var(--p-ink);
+  --card: var(--p-card);
+  --card-foreground: var(--p-ink);
+  --popover: var(--p-bg);
+  --popover-foreground: var(--p-ink);
+  --primary: var(--p-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--p-secondary);
+  --secondary-foreground: var(--p-ink);
+  --muted: var(--p-muted);
+  --muted-foreground: var(--p-muted-fg);
+  --accent: var(--p-accent);
+  --accent-foreground: var(--p-ink);
+  --destructive: #b94a64;
+  --destructive-foreground: #ffffff;
+  --border: var(--p-border);
+  --input: var(--p-border);
+  --ring: var(--p-primary);
+}
+.dark.palette-peony,
+.dark:where(.palette-peony) {
+  --background: #2a1a26;
+  --foreground: #f5e6dd;
+  --card: #3d2535;
+  --card-foreground: #f5e6dd;
+  --popover: #2a1a26;
+  --popover-foreground: #f5e6dd;
+  --primary: #ee9aa8;
+  --primary-foreground: #2a1a26;
+  --secondary: #f0c060;
+  --secondary-foreground: #2a1a26;
+  --muted: #3d2535;
+  --muted-foreground: #c8a8b5;
+  --accent: #b8c89a;
+  --accent-foreground: #2a1a26;
+  --border: color-mix(in srgb, #ee9aa8 32%, transparent);
+  --input: color-mix(in srgb, #ee9aa8 32%, transparent);
+  --ring: #ee9aa8;
+}
+
+/* ============================================================
+   PALETTE: SAGE GARDEN  (fresh herbal calm)
+   Sage × cream × dusty rose × pale yellow.
+   ============================================================ */
+.palette-sage-garden {
+  --background: #f3f1e8;        /* pale herbal cream */
+  --foreground: #2e3b2a;        /* deep forest */
   --card: #ffffff;
-  --card-foreground: var(--ink);
-  --popover: var(--paper);
-  --popover-foreground: var(--ink);
-  --primary: var(--pacific-blue); /* Now using bright Pacific Blue */
-  --primary-foreground: white;
-  --secondary: var(--dusk-blue); /* Bright Dusk Blue */
-  --secondary-foreground: white;
-  --muted: var(--silver);
-  --muted-foreground: var(--grape-soda); /* Purple accent */
-  --accent: var(--grape-soda); /* Purple accent */
-  --accent-foreground: white;
-  --destructive: var(--vintage-berry);
-  --destructive-foreground: white;
-  --border: var(--silver);
-  --input: var(--silver);
-  --ring: var(--dusk-blue); /* Bright blue ring */
-  --radius: 0.375rem;
+  --card-foreground: #2e3b2a;
+  --popover: #f3f1e8;
+  --popover-foreground: #2e3b2a;
+  --primary: #7c9468;           /* fresh sage */
+  --primary-foreground: #ffffff;
+  --secondary: #d9a5a8;          /* dusty rose */
+  --secondary-foreground: #2e3b2a;
+  --muted: #e6e2d1;
+  --muted-foreground: #6c7d5d;
+  --accent: #e8b34f;             /* marigold */
+  --accent-foreground: #2e3b2a;
+  --destructive: #a8584d;
+  --destructive-foreground: #ffffff;
+  --border: color-mix(in srgb, #7c9468 28%, transparent);
+  --input: color-mix(in srgb, #7c9468 28%, transparent);
+  --ring: #7c9468;
+}
+.dark.palette-sage-garden,
+.dark:where(.palette-sage-garden) {
+  --background: #1f2419;
+  --foreground: #e8e6d4;
+  --card: #2e3b2a;
+  --card-foreground: #e8e6d4;
+  --popover: #1f2419;
+  --popover-foreground: #e8e6d4;
+  --primary: #a8c08f;
+  --primary-foreground: #1f2419;
+  --secondary: #e8c6c9;
+  --secondary-foreground: #1f2419;
+  --muted: #2e3b2a;
+  --muted-foreground: #b5c2a3;
+  --accent: #f0c060;
+  --accent-foreground: #1f2419;
+  --border: color-mix(in srgb, #a8c08f 32%, transparent);
+  --input: color-mix(in srgb, #a8c08f 32%, transparent);
+  --ring: #a8c08f;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+/* ============================================================
+   PALETTE: CORAL BLOOM  (warm coral, peach, gold)
+   Warmth, sunset, golden hour.
+   ============================================================ */
+.palette-coral-bloom {
+  --background: #fcefe5;        /* peach cream */
+  --foreground: #4a2820;
+  --card: #ffffff;
+  --card-foreground: #4a2820;
+  --popover: #fcefe5;
+  --popover-foreground: #4a2820;
+  --primary: #d96a4a;           /* coral */
+  --primary-foreground: #ffffff;
+  --secondary: #e8b34f;           /* warm gold */
+  --secondary-foreground: #4a2820;
+  --muted: #f4dbcb;
+  --muted-foreground: #8b5638;
+  --accent: #c89a6a;            /* cinnamon */
+  --accent-foreground: #4a2820;
+  --destructive: #a83830;
+  --destructive-foreground: #ffffff;
+  --border: color-mix(in srgb, #d96a4a 28%, transparent);
+  --input: color-mix(in srgb, #d96a4a 28%, transparent);
+  --ring: #d96a4a;
+}
+.dark.palette-coral-bloom,
+.dark:where(.palette-coral-bloom) {
+  --background: #2a1a14;
+  --foreground: #f5dbc8;
+  --card: #3d2520;
+  --card-foreground: #f5dbc8;
+  --popover: #2a1a14;
+  --popover-foreground: #f5dbc8;
+  --primary: #f08868;
+  --primary-foreground: #2a1a14;
+  --secondary: #f0c878;
+  --secondary-foreground: #2a1a14;
+  --muted: #3d2520;
+  --muted-foreground: #d4a890;
+  --accent: #e8b890;
+  --accent-foreground: #2a1a14;
+  --border: color-mix(in srgb, #f08868 32%, transparent);
+  --input: color-mix(in srgb, #f08868 32%, transparent);
+  --ring: #f08868;
 }
 
+/* ============================================================
+   PALETTE: TWILIGHT VELVET  (moody luxe, original direction)
+   Aubergine × brass × dusty rose. Anthropologie-at-dusk.
+   ============================================================ */
+.palette-twilight {
+  --background: var(--cream);
+  --foreground: var(--aubergine-deep);
+  --card: #ffffff;
+  --card-foreground: var(--aubergine-deep);
+  --popover: var(--cream);
+  --popover-foreground: var(--aubergine-deep);
+  --primary: var(--brass);
+  --primary-foreground: #ffffff;
+  --secondary: var(--dusty-rose);
+  --secondary-foreground: var(--aubergine-deep);
+  --muted: var(--bone);
+  --muted-foreground: var(--brass-deep);
+  --accent: var(--sage);
+  --accent-foreground: var(--aubergine-deep);
+  --destructive: var(--winterberry);
+  --destructive-foreground: #ffffff;
+  --border: color-mix(in srgb, var(--brass) 22%, transparent);
+  --input: color-mix(in srgb, var(--brass) 22%, transparent);
+  --ring: var(--brass);
+}
+.dark.palette-twilight,
+.dark:where(.palette-twilight) {
+  --background: var(--aubergine-velvet);
+  --foreground: var(--cream-warm);
+  --card: var(--aubergine);
+  --card-foreground: var(--cream-warm);
+  --popover: var(--midnight);
+  --popover-foreground: var(--cream-warm);
+  --primary: var(--brass-luminous);
+  --primary-foreground: var(--aubergine-velvet);
+  --secondary: var(--dusty-rose-luminous);
+  --secondary-foreground: var(--aubergine-velvet);
+  --muted: var(--midnight);
+  --muted-foreground: var(--brass-luminous);
+  --accent: var(--sage);
+  --accent-foreground: var(--aubergine-velvet);
+  --border: color-mix(in srgb, var(--brass-luminous) 28%, transparent);
+  --input: color-mix(in srgb, var(--brass-luminous) 28%, transparent);
+  --ring: var(--brass-luminous);
+}
+
+/* ============================================================
+   Tailwind v4 token mapping
+   ============================================================ */
 @theme inline {
-  /* Editorial typography using Cormorant Garamond for headings */
   --font-sans: "Inter", "Inter Fallback", system-ui, -apple-system, sans-serif;
   --font-serif: "Cormorant Garamond", "Georgia", serif;
+  --font-display: "Italiana", "Cormorant Garamond", "Georgia", serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -111,7 +284,25 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Direct color tokens for the palette */
+  /* Editorial named colors (fixed across palettes) */
+  --color-cream: var(--cream);
+  --color-cream-warm: var(--cream-warm);
+  --color-bone: var(--bone);
+  --color-brass: var(--brass);
+  --color-brass-deep: var(--brass-deep);
+  --color-brass-luminous: var(--brass-luminous);
+  --color-aubergine: var(--aubergine);
+  --color-aubergine-deep: var(--aubergine-deep);
+  --color-aubergine-velvet: var(--aubergine-velvet);
+  --color-midnight: var(--midnight);
+  --color-terracotta: var(--terracotta);
+  --color-sage: var(--sage);
+  --color-sage-deep: var(--sage-deep);
+  --color-dusty-rose: var(--dusty-rose);
+  --color-dusty-rose-luminous: var(--dusty-rose-luminous);
+  --color-honey: var(--honey);
+
+  /* Legacy palette tokens */
   --color-vintage-berry: var(--vintage-berry);
   --color-grape-soda: var(--grape-soda);
   --color-dusk-blue: var(--dusk-blue);
@@ -119,14 +310,10 @@
   --color-silver: var(--silver);
   --color-paper: var(--paper);
   --color-ink: var(--ink);
-
-  /* Short aliases used throughout the codebase */
   --color-berry: var(--vintage-berry);
   --color-grape: var(--grape-soda);
   --color-dusk: var(--dusk-blue);
   --color-pacific: var(--pacific-blue);
-
-  /* Extended palette tokens */
   --color-bronze-brown: var(--bronze-brown);
   --color-branded-melon: var(--branded-melon);
   --color-lemon-grass: var(--lemon-grass);
@@ -138,24 +325,11 @@
   --color-chili-oil: var(--chili-oil);
   --color-hot-chocolate: var(--hot-chocolate);
 
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 4px);
-  --radius-xl: calc(var(--radius) + 8px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 12px);
 }
 
 @layer base {
@@ -163,6 +337,32 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground leading-relaxed;
+    @apply bg-background text-foreground leading-relaxed antialiased;
+    background-image:
+      radial-gradient(at 12% 8%, color-mix(in srgb, var(--secondary) 22%, transparent) 0px, transparent 45%),
+      radial-gradient(at 88% 4%, color-mix(in srgb, var(--accent) 18%, transparent) 0px, transparent 50%),
+      radial-gradient(at 60% 100%, color-mix(in srgb, var(--primary) 14%, transparent) 0px, transparent 55%);
+    background-attachment: fixed;
+    transition: background-color 280ms ease, color 280ms ease;
+  }
+  .dark body {
+    background-image:
+      radial-gradient(at 10% 0%, color-mix(in srgb, var(--primary) 16%, transparent) 0px, transparent 45%),
+      radial-gradient(at 90% 10%, color-mix(in srgb, var(--secondary) 12%, transparent) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, color-mix(in srgb, var(--accent) 12%, transparent) 0px, transparent 60%);
+  }
+  /* Smooth palette transitions */
+  html {
+    transition: background-color 280ms ease;
+  }
+}
+
+@layer components {
+  .section-mark {
+    @apply inline-block h-px w-12 align-middle;
+    background-color: var(--primary);
+  }
+  .display-xl {
+    @apply font-display tracking-[0.18em] uppercase;
   }
 }

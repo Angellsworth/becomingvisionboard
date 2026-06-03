@@ -2,162 +2,189 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
-import { Home, Calendar, CalendarDays, LogOut, Menu, X } from "lucide-react"
-import { useState } from "react"
-import { useYear } from "@/components/year-provider"
-import { YearSelector } from "@/components/year-selector"
+import {
+  Sparkles,
+  Frame,
+  UserRound,
+  Target,
+  Feather,
+  Flower2,
+} from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { ThemeToggle } from "@/components/theme-toggle"
+
+/**
+ * Six sections of the app:
+ * - Home (the dashboard you open every morning)
+ * - Board (Pinterest-style becoming board)
+ * - Future Self (the profile you are becoming)
+ * - Projects (life projects with progress)
+ * - Reflection (journal + prompts)
+ * - Garden (the sacred space that grows with your activity)
+ */
+const SECTIONS = [
+  { path: "/home", label: "Home", icon: Sparkles },
+  { path: "/board", label: "Board", icon: Frame },
+  { path: "/future-self", label: "Future Self", icon: UserRound },
+  { path: "/projects", label: "Projects", icon: Target },
+  { path: "/reflection", label: "Reflection", icon: Feather },
+  { path: "/garden", label: "Garden", icon: Flower2 },
+] as const
 
 export function Navigation() {
   const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
   const { user, authEnabled, signOut } = useAuth()
-  const { year } = useYear()
 
-  // When auth is disabled (no env vars), treat the user as signed-in so the
-  // app's main features are accessible — localStorage is the data store.
-  const showAppLinks = !authEnabled || Boolean(user)
-  const handleLogout = () => signOut()
+  // When auth is off (no Supabase env) we still treat the visitor as "in the app"
+  // so localStorage-only mode is usable without a signup gate.
+  const inApp = !authEnabled || Boolean(user)
 
-  const isActive = (path: string) => pathname === path
+  if (!inApp) return <PublicNav />
 
-  const linkClass = (active: boolean) =>
-    cn(
-      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
-      active
-        ? "bg-pacific-blue text-white"
-        : "text-ink hover:text-dusk-blue hover:bg-grape-soda/20",
-    )
+  return <AppNav pathname={pathname} authEnabled={authEnabled} user={user} signOut={signOut} />
+}
+
+interface AppNavProps {
+  pathname: string
+  authEnabled: boolean
+  user: { id: string; email?: string } | null
+  signOut: () => Promise<void>
+}
+
+function AppNav({ pathname, user }: AppNavProps) {
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/")
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-paper/80 backdrop-blur-md border-b border-silver/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link href={showAppLinks ? "/home" : "/"} className="flex items-center gap-3">
-            <h1 className="font-serif text-xl sm:text-2xl font-light tracking-wide text-ink">
-              Becoming <span className="tabular-nums">{year}</span>
-            </h1>
-          </Link>
-
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-2">
-            {showAppLinks && <YearSelector />}
-            {showAppLinks && (
-              <>
-                <Link href="/home" className={linkClass(isActive("/home"))}>
-                  <Home className="w-4 h-4" />
-                  <span>Annual</span>
-                </Link>
-                <Link href="/months" className={linkClass(pathname.includes("/month"))}>
-                  <Calendar className="w-4 h-4" />
-                  <span>Months</span>
-                </Link>
-                <Link href="/year-overview" className={linkClass(isActive("/year-overview"))}>
-                  <CalendarDays className="w-4 h-4" />
-                  <span>Overview</span>
-                </Link>
-                {authEnabled && user && (
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-ink hover:text-vintage-berry hover:bg-vintage-berry/10"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Logout</span>
-                  </button>
-                )}
-              </>
-            )}
-
-            {authEnabled && !user && (
-              <>
-                <Link
-                  href="/auth/login"
-                  className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-ink hover:text-dusk-blue hover:bg-grape-soda/20"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/auth/sign-up"
-                  className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors bg-pacific-blue text-white hover:bg-dusk-blue"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden p-2 text-ink hover:text-dusk-blue"
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+    <>
+      {/* === Desktop top bar === */}
+      <nav className="fixed top-0 inset-x-0 z-40 hidden md:flex h-16 items-center justify-between px-8 bg-background/70 backdrop-blur-xl border-b border-border">
+        <Link
+          href="/home"
+          className="font-display text-2xl tracking-[0.18em] text-foreground hover:text-primary transition-colors"
+        >
+          Becoming
+        </Link>
+        <div className="flex items-center gap-1">
+          {SECTIONS.map(({ path, label, icon: Icon }) => (
+            <Link
+              key={path}
+              href={path}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all",
+                isActive(path)
+                  ? "bg-primary/12 text-primary font-medium"
+                  : "text-foreground/70 hover:text-foreground hover:bg-card/60",
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{label}</span>
+            </Link>
+          ))}
         </div>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <ProfileChip pathname={pathname} email={user?.email ?? null} />
+        </div>
+      </nav>
 
-        {/* Mobile menu */}
-        {mobileOpen && (
-          <div className="md:hidden pb-4 flex flex-col gap-1 border-t border-silver/30 pt-3">
-            {showAppLinks && (
-              <div className="flex justify-center pb-2">
-                <YearSelector />
-              </div>
-            )}
-            {showAppLinks && (
-              <>
-                <Link href="/home" onClick={() => setMobileOpen(false)} className={linkClass(isActive("/home"))}>
-                  <Home className="w-4 h-4" />
-                  <span>Annual</span>
-                </Link>
-                <Link
-                  href="/months"
-                  onClick={() => setMobileOpen(false)}
-                  className={linkClass(pathname.includes("/month"))}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Months</span>
-                </Link>
-                <Link
-                  href="/year-overview"
-                  onClick={() => setMobileOpen(false)}
-                  className={linkClass(isActive("/year-overview"))}
-                >
-                  <CalendarDays className="w-4 h-4" />
-                  <span>Overview</span>
-                </Link>
-                {authEnabled && user && (
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-ink hover:text-vintage-berry hover:bg-vintage-berry/10"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Logout</span>
-                  </button>
-                )}
-              </>
-            )}
-            {authEnabled && !user && (
-              <>
-                <Link
-                  href="/auth/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-ink hover:text-dusk-blue hover:bg-grape-soda/20"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/auth/sign-up"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-pacific-blue text-white hover:bg-dusk-blue"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
-          </div>
-        )}
+      {/* === Mobile top bar === */}
+      <nav className="fixed top-0 inset-x-0 z-40 md:hidden h-14 flex items-center justify-between px-5 bg-background/80 backdrop-blur-xl border-b border-border">
+        <Link href="/home" className="font-display text-xl tracking-[0.18em] text-foreground">
+          Becoming
+        </Link>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <ProfileChip pathname={pathname} email={user?.email ?? null} />
+        </div>
+      </nav>
+
+      {/* === Mobile bottom tab bar === */}
+      <nav
+        className="fixed bottom-0 inset-x-0 z-40 md:hidden grid grid-cols-6 gap-1 px-2 pt-1.5 bg-background/85 backdrop-blur-xl border-t border-border"
+        style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+      >
+        {SECTIONS.map(({ path, label, icon: Icon }) => {
+          const active = isActive(path)
+          return (
+            <Link
+              key={path}
+              href={path}
+              className={cn(
+                "flex flex-col items-center justify-center gap-0.5 py-1 rounded-lg transition-all",
+                active ? "text-primary" : "text-foreground/55",
+              )}
+            >
+              <Icon className={cn("w-5 h-5 transition-transform", active && "scale-110")} />
+              <span className="text-[10px] tracking-wide font-medium">{label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+    </>
+  )
+}
+
+interface ProfileChipProps {
+  pathname: string
+  email: string | null
+}
+
+function ProfileChip({ pathname, email }: ProfileChipProps) {
+  const [displayName, setDisplayName] = useState<string | null>(null)
+  useEffect(() => {
+    try {
+      setDisplayName(localStorage.getItem("becoming-display-name"))
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Use display name initial, else email initial, else fallback
+  const source = displayName || email || ""
+  const initial = source ? source.trim()[0].toUpperCase() : "•"
+  const active = pathname.startsWith("/profile")
+
+  return (
+    <Link
+      href="/profile"
+      className={cn(
+        "w-10 h-10 flex items-center justify-center rounded-full border transition-all font-serif text-base",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card/60 text-foreground hover:border-primary/60 hover:bg-card",
+      )}
+      aria-label="Open profile"
+    >
+      {initial}
+    </Link>
+  )
+}
+
+function PublicNav() {
+  return (
+    <nav className="fixed top-0 inset-x-0 z-40 h-16 flex items-center justify-between px-5 md:px-8 bg-background/70 backdrop-blur-xl border-b border-border">
+      <Link
+        href="/"
+        className="font-display text-xl md:text-2xl tracking-[0.18em] text-foreground hover:text-primary transition-colors"
+      >
+        Becoming
+      </Link>
+      <div className="flex items-center gap-1 md:gap-2">
+        <ThemeToggle />
+        <Link
+          href="/auth/login"
+          className="hidden sm:inline-flex px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground transition-colors"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/auth/sign-up"
+          className="px-4 py-1.5 text-sm rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
+        >
+          Begin
+        </Link>
       </div>
     </nav>
   )

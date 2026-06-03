@@ -1,13 +1,10 @@
-import { Navigation } from "@/components/navigation"
-import { AnnualCollage } from "@/components/annual-collage"
+import { AppShell } from "@/components/app-shell"
+import { HomeDashboard } from "@/components/home-dashboard"
 
 export default function HomePage() {
   return (
-    <>
-      <Navigation />
-      <main className="min-h-screen pt-16">
-        <AnnualCollage />
-      </main>
-    </>
+    <AppShell>
+      <HomeDashboard />
+    </AppShell>
   )
 }

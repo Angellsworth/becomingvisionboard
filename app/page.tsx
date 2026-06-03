@@ -1,104 +1,100 @@
 "use client"
 
 import { Navigation } from "@/components/navigation"
-import { RotatingQuote } from "@/components/rotating-quote"
 import { Button } from "@/components/ui/button"
-import { useYear } from "@/components/year-provider"
+import { quoteForDate } from "@/lib/quotes"
+import { Frame, UserRound, Target, Feather, Flower2 } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+
+const PILLARS = [
+  { icon: Frame, label: "Becoming Board", line: "Vision in pictures." },
+  { icon: UserRound, label: "Future Self", line: "Who you are becoming." },
+  { icon: Target, label: "Life Projects", line: "Threads in motion." },
+  { icon: Feather, label: "Reflection", line: "Today's quiet page." },
+  { icon: Flower2, label: "Memory Garden", line: "What you tend, blooms." },
+]
 
 export default function LandingPage() {
-  const { year } = useYear()
+  const [today, setToday] = useState<Date | null>(null)
+  useEffect(() => setToday(new Date()), [])
+  const quote = quoteForDate(today ?? new Date(0))
+
   return (
     <>
       <Navigation />
-      <main className="min-h-screen pt-16">
-        <div className="max-w-4xl mx-auto px-6 py-24">
-          {/* Hero Section */}
-          <div className="text-center space-y-6 mb-16">
-            <h1 className="font-serif text-6xl md:text-7xl text-primary leading-tight text-balance">Becoming {year}</h1>
-            <p className="text-xl md:text-2xl text-foreground/80 leading-relaxed text-pretty max-w-2xl mx-auto">
-              A gentle space to visualize your transformation through collages, baby steps, and reflection
+      <main className="min-h-screen pt-20 md:pt-28 pb-20">
+        <div className="max-w-4xl mx-auto px-5 md:px-8">
+          {/* Hero */}
+          <div className="text-center">
+            <p className="text-xs md:text-sm tracking-[0.4em] uppercase text-primary mb-6">
+              A becoming dashboard
             </p>
-            <div className="flex gap-4 justify-center pt-6">
-              <Button asChild size="lg" className="bg-pacific hover:bg-pacific/90 text-white">
-                <Link href="/auth/sign-up">Begin Your Journey</Link>
+            <h1 className="font-display text-6xl md:text-8xl tracking-[0.04em] leading-[1.02] text-foreground">
+              Becoming
+            </h1>
+            <p className="mt-6 md:mt-8 font-serif italic text-xl md:text-2xl text-foreground/75 max-w-2xl mx-auto leading-relaxed">
+              She is not starting over. <br className="hidden sm:inline" />
+              She is becoming.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild size="lg" className="bg-primary hover:opacity-90 text-primary-foreground font-medium">
+                <Link href="/auth/sign-up">Begin your becoming</Link>
               </Button>
               <Button
                 asChild
                 size="lg"
                 variant="outline"
-                className="border-dusk text-dusk hover:bg-dusk/10 bg-transparent"
+                className="border-border text-foreground hover:bg-card/60 bg-transparent"
               >
-                <Link href="/auth/login">Sign In</Link>
+                <Link href="/auth/login">Sign in</Link>
               </Button>
             </div>
           </div>
 
-          {/* Inspirational Quotes Section */}
-          <RotatingQuote />
-
-          {/* Features */}
-          <div className="grid md:grid-cols-3 gap-8 mt-24">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-full bg-pacific/20 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-pacific" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
+          {/* Today's quote */}
+          {today && (
+            <div className="mt-16 md:mt-24 max-w-2xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <span className="section-mark" aria-hidden />
+                <p className="text-xs tracking-[0.3em] uppercase text-primary">A word for today</p>
+                <span className="section-mark" aria-hidden />
               </div>
-              <h3 className="font-serif text-2xl text-primary">Vision Collages</h3>
-              <p className="text-muted leading-relaxed">
-                Create organic, editorial-style collages for your year and each month. Drag, drop, and position images
-                freely to visualize your transformation.
-              </p>
+              <blockquote className="font-serif italic text-xl md:text-2xl leading-relaxed text-foreground/85 text-center">
+                &ldquo;{quote.text}&rdquo;
+              </blockquote>
+              <p className="text-center text-sm text-foreground/55 mt-3">— {quote.author}</p>
             </div>
+          )}
 
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-full bg-grape/20 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-grape" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  />
-                </svg>
-              </div>
-              <h3 className="font-serif text-2xl text-primary">Becoming Practices</h3>
-              <p className="text-muted leading-relaxed">
-                Track your baby steps without the pressure. No streaks, no percentages—just gentle visual feedback as
-                you build your practices.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-full bg-dusk/20 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-dusk" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                  />
-                </svg>
-              </div>
-              <h3 className="font-serif text-2xl text-primary">Monthly Reflections</h3>
-              <p className="text-muted leading-relaxed">
-                Define your becoming direction and reflect on your journey each month. Watch your year unfold in the
-                overview timeline.
-              </p>
+          {/* Pillars */}
+          <div className="mt-20 md:mt-28">
+            <p className="text-center text-xs tracking-[0.3em] uppercase text-primary mb-10">
+              What lives inside
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+              {PILLARS.map(({ icon: Icon, label, line }) => (
+                <div
+                  key={label}
+                  className="flex sm:flex-col items-center sm:items-start gap-4 sm:gap-3 p-5 rounded-2xl border border-border bg-card/40 backdrop-blur-sm"
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary/12 text-primary flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg text-foreground">{label}</h3>
+                    <p className="text-sm text-foreground/60">{line}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Closing */}
-          <div className="text-center mt-24 pt-12 border-t border-silver/20">
-            <p className="text-lg text-muted/80 max-w-2xl mx-auto leading-relaxed">
-              This is your space to become who you want to be in {year}. No pressure, no gamification—just you, your
-              vision, and your baby steps forward.
+          <div className="text-center mt-20 md:mt-28 pt-12 border-t border-border/60">
+            <p className="font-serif italic text-base md:text-lg text-foreground/65 max-w-xl mx-auto">
+              No streaks. No pressure. <br />
+              A quiet, beautiful place to come home to.
             </p>
           </div>
         </div>
