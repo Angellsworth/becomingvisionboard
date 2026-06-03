@@ -2,9 +2,11 @@ import { updateSession } from "@/lib/supabase/proxy"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function proxy(request: NextRequest) {
-  // If Supabase env vars are not configured, skip auth gating entirely.
+  // Skip auth gating entirely when Supabase isn't configured.
   // The app falls back to localStorage-only mode.
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  const hasKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !hasKey) {
     return NextResponse.next()
   }
   return await updateSession(request)
