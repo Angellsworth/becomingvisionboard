@@ -7,6 +7,9 @@ import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { PaletteProvider } from "@/components/palette-provider"
 import { AudioProvider } from "@/components/audio-provider"
+import { CompanionProvider } from "@/components/companion-provider"
+import { CompanionButton } from "@/components/companion-button"
+import { CompanionPanel } from "@/components/companion-panel"
 import "./globals.css"
 
 const inter = Inter({
@@ -63,7 +66,13 @@ export default function RootLayout({
           <PaletteProvider>
             <AudioProvider>
               <AuthProvider>
-                <YearProvider>{children}</YearProvider>
+                <YearProvider>
+                  <CompanionProvider>
+                    {children}
+                    <CompanionButton />
+                    <CompanionPanel />
+                  </CompanionProvider>
+                </YearProvider>
               </AuthProvider>
             </AudioProvider>
           </PaletteProvider>
