@@ -148,8 +148,10 @@ export interface GardenItem {
 }
 
 // Category tints duplicated here from projects.ts to keep the garden
-// independent of the projects module's React hook ergonomics. Tints
-// stay fixed across palettes — a category's colour is part of its meaning.
+// independent of the projects module's React hook ergonomics. Used
+// for sprouts (active projects) so the bud reads as that category's
+// promise, while bloomed items pull from the wider wildflower palette
+// below for a cacophony of colour.
 const CATEGORY_INFO: Record<
   string,
   { label: string; tint: string }
@@ -163,6 +165,40 @@ const CATEGORY_INFO: Record<
   financial: { label: "Money", tint: "#e3c47a" },
   relationships: { label: "People", tint: "#e8b4b8" },
   other: { label: "Other", tint: "#b5b89c" },
+}
+
+/**
+ * Wildflower palette — 15 vivid blooms across the chromatic wheel.
+ * Bloomed items (completed projects, milestones, reflections) pick a
+ * colour from this set via a deterministic hash of the item id, so each
+ * bloom keeps its identity across sessions but the bed reads as a
+ * gathered, varied bouquet rather than colour-coded categories.
+ */
+const WILDFLOWER_PALETTE = [
+  "#d84565", // hot rose
+  "#e87a5d", // coral
+  "#e8a13a", // marigold
+  "#e3c47a", // honey
+  "#7c9468", // sage
+  "#5a8a6e", // emerald
+  "#b59bc8", // lavender
+  "#6e4475", // plum
+  "#e8b4b8", // blush
+  "#a83648", // berry
+  "#f0a888", // peach
+  "#9aa8d4", // periwinkle
+  "#d9a5a8", // dusty rose
+  "#c47a5d", // terracotta
+  "#b8924e", // brass
+] as const
+
+function pickWildflowerColor(id: string): string {
+  // Cheap stable hash → bucket index. Same id always lands on the same colour.
+  let h = 0
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) | 0
+  }
+  return WILDFLOWER_PALETTE[Math.abs(h) % WILDFLOWER_PALETTE.length]
 }
 
 function prettyShortDate(iso: string): string {
@@ -239,12 +275,13 @@ export function buildGardenItems(): GardenItem[] {
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
   for (const p of completed) {
     const cat = CATEGORY_INFO[p.category ?? "other"] ?? CATEGORY_INFO.other
+    const id = `complete-${p.id}`
     items.push({
-      id: `complete-${p.id}`,
+      id,
       type: "complete",
       title: p.title || "A completed thread",
       subtitle: `Complete · ${cat.label}`,
-      tint: cat.tint,
+      tint: pickWildflowerColor(id),
       flowerType: 0, // tulip
       scale: 1.0,
     })
@@ -256,12 +293,13 @@ export function buildGardenItems(): GardenItem[] {
     const cat = CATEGORY_INFO[p.category ?? "other"] ?? CATEGORY_INFO.other
     for (const m of p.milestones ?? []) {
       if (!m?.done) continue
+      const id = `milestone-${p.id}-${m.id}`
       items.push({
-        id: `milestone-${p.id}-${m.id}`,
+        id,
         type: "milestone",
         title: m.text || "A milestone",
         subtitle: p.title ? `Milestone in ${p.title}` : `In ${cat.label}`,
-        tint: cat.tint,
+        tint: pickWildflowerColor(id),
         flowerType: 1, // daisy
         scale: 0.9,
       })
@@ -273,18 +311,21 @@ export function buildGardenItems(): GardenItem[] {
     .filter((e) => (e?.body ?? "").trim().length > 0)
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
   for (const e of reflections) {
+    const id = `reflection-${e.id}`
     items.push({
-      id: `reflection-${e.id}`,
+      id,
       type: "reflection",
       title: e.prompt || "A free page",
       subtitle: e.isoDate ? `Reflection · ${prettyShortDate(e.isoDate)}` : "Reflection",
-      tint: "var(--secondary)",
+      tint: pickWildflowerColor(id),
       flowerType: 2, // cluster
       scale: 0.9,
     })
   }
 
-  // 4. Active projects — newest first, shown as sprouts
+  // 4. Active projects — newest first, shown as sprouts.
+  // Sprouts KEEP the category tint as the visible "promise" of what
+  // they'll become; only the bloomed items go cacophonous.
   const active = projects
     .filter((p) => p?.status === "active")
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
