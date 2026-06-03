@@ -2,6 +2,7 @@
 // stored as a single chronological feed in localStorage.
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { playSound } from "@/lib/audio/engine"
 
 export interface JournalEntry {
   id: string
@@ -261,9 +262,14 @@ export function useJournal() {
   const writeToday = useCallback(
     (body: string) => {
       if (!today) return
+      const wasNew = !todayEntry
       // Lazily create the today entry on first keystroke.
       const entry = todayEntry ?? journalStore.ensureFor(todayPrompt, todayIso)
       journalStore.update(entry.id, { body })
+      // First keystroke of the day → soft bloom chime.
+      if (wasNew && body.trim().length > 0) {
+        playSound("bloom")
+      }
       refresh()
     },
     [today, todayEntry, todayPrompt, todayIso, refresh],
@@ -272,6 +278,7 @@ export function useJournal() {
   const addFreeForm = useCallback((): JournalEntry | null => {
     if (!today) return null
     const created = journalStore.createFreeForm(todayIso)
+    if (created) playSound("bloom")
     refresh()
     return created
   }, [today, todayIso, refresh])

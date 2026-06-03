@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { AudioToggle } from "@/components/audio-toggle"
 
 /**
  * Six sections of the app:
@@ -84,6 +85,7 @@ function AppNav({ pathname, user }: AppNavProps) {
           ))}
         </div>
         <div className="flex items-center gap-1">
+          <AudioToggle />
           <ThemeToggle />
           <ProfileChip pathname={pathname} email={user?.email ?? null} />
         </div>
@@ -95,6 +97,7 @@ function AppNav({ pathname, user }: AppNavProps) {
           Becoming
         </Link>
         <div className="flex items-center gap-1">
+          <AudioToggle />
           <ThemeToggle />
           <ProfileChip pathname={pathname} email={user?.email ?? null} />
         </div>
@@ -172,6 +175,7 @@ function PublicNav() {
         Becoming
       </Link>
       <div className="flex items-center gap-1 md:gap-2">
+        <AudioToggle />
         <ThemeToggle />
         <Link
           href="/auth/login"

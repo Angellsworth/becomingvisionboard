@@ -8,6 +8,8 @@ import {
   phaseFor,
   type GardenStats,
 } from "@/lib/data/garden-state"
+import { startAmbient, stopAmbient } from "@/lib/audio/engine"
+import { useAudio } from "@/components/audio-provider"
 
 /**
  * Memory Garden — Monument Valley by way of a vision board.
@@ -26,11 +28,22 @@ import {
  */
 export function MemoryGarden() {
   const [stats, setStats] = useState<GardenStats | null>(null)
+  const { enabled: audioEnabled } = useAudio()
 
   // Compute after mount — keeps SSR and CSR markup consistent.
   useEffect(() => {
     setStats(computeGardenStats())
   }, [])
+
+  // Start/stop the ambient pad with the page and the audio toggle.
+  useEffect(() => {
+    if (audioEnabled) {
+      startAmbient()
+    }
+    return () => {
+      stopAmbient()
+    }
+  }, [audioEnabled])
 
   const ready = stats !== null
   const tokens = stats?.tokens ?? 0
@@ -205,7 +218,6 @@ export function MemoryGarden() {
               type={spot.type}
               scale={spot.scale}
               color={FLOWER_COLORS[spot.colorIdx % FLOWER_COLORS.length]}
-              swayDelay={`${(spot.idx % 5) * 0.7}s`}
             />
           ))}
 
@@ -252,21 +264,11 @@ export function MemoryGarden() {
         </div>
       </div>
 
-      {/* Local styles for sway + bee paths + wings */}
+      {/* Local styles for bees + wings.
+          (Flower sway was here but caused a CSS-vs-SVG transform clash
+          that made each flower jump to (0,0) at the peak of every cycle.
+          Removed for stability; bees provide the scene's motion.) */}
       <style jsx>{`
-        :global(.garden-flower) {
-          transform-box: fill-box;
-          transform-origin: bottom center;
-          animation: garden-sway 6s ease-in-out infinite;
-        }
-        @keyframes garden-sway {
-          0%, 100% {
-            transform: rotate(-2.2deg);
-          }
-          50% {
-            transform: rotate(2.2deg);
-          }
-        }
         :global(.garden-bee-wings) {
           transform-box: fill-box;
           transform-origin: center;
@@ -431,19 +433,14 @@ interface FlowerProps {
   type: 0 | 1 | 2 | 3
   scale: number
   color: string
-  swayDelay: string
 }
 
-function Flower({ x, y, type, scale, color, swayDelay }: FlowerProps) {
+function Flower({ x, y, type, scale, color }: FlowerProps) {
   const stemColor = "color-mix(in srgb, var(--accent) 75%, black)"
   const stemHeight = 36
 
   return (
-    <g
-      className="garden-flower"
-      transform={`translate(${x} ${y}) scale(${scale})`}
-      style={{ animationDelay: swayDelay }}
-    >
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
       <line
         x1="0"
         y1="0"

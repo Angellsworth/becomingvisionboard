@@ -8,6 +8,7 @@
 // alongside the bar, not driving it.
 
 import { useCallback, useEffect, useState } from "react"
+import { playSound } from "@/lib/audio/engine"
 
 export type ProjectCategory =
   | "fitness"
@@ -163,8 +164,15 @@ export function useProjects() {
 
   const update = useCallback(
     (id: string, patch: Partial<Omit<LifeProject, "id" | "createdAt">>) => {
+      // Detect a status → "completed" transition for the celebratory bell.
+      const before = projectsStore.list().find((p) => p.id === id)
       const result = projectsStore.update(id, patch)
-      if (result) refresh()
+      if (result) {
+        if (before && before.status !== "completed" && result.status === "completed") {
+          playSound("complete")
+        }
+        refresh()
+      }
       return result
     },
     [refresh],
@@ -182,10 +190,13 @@ export function useProjects() {
     (projectId: string, milestoneId: string) => {
       const project = projectsStore.list().find((p) => p.id === projectId)
       if (!project) return
+      const ms = project.milestones.find((m) => m.id === milestoneId)
+      const willBeDone = !(ms?.done ?? false)
       const nextMilestones = project.milestones.map((m) =>
         m.id === milestoneId ? { ...m, done: !m.done } : m,
       )
       projectsStore.update(projectId, { milestones: nextMilestones })
+      if (willBeDone) playSound("tick")
       refresh()
     },
     [refresh],

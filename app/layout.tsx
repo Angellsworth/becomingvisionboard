@@ -6,6 +6,7 @@ import { YearProvider } from "@/components/year-provider"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { PaletteProvider } from "@/components/palette-provider"
+import { AudioProvider } from "@/components/audio-provider"
 import "./globals.css"
 
 const inter = Inter({
@@ -60,9 +61,11 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <PaletteProvider>
-            <AuthProvider>
-              <YearProvider>{children}</YearProvider>
-            </AuthProvider>
+            <AudioProvider>
+              <AuthProvider>
+                <YearProvider>{children}</YearProvider>
+              </AuthProvider>
+            </AudioProvider>
           </PaletteProvider>
         </ThemeProvider>
         <Analytics />
