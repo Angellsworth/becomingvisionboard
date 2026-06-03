@@ -4,67 +4,43 @@ import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-interface CollageImage {
-  id: string
-  url: string
-  x: number
-  y: number
-  width: number
-  height: number
-  rotation: number
-  zIndex: number
-}
+import { useMonthlyCollageData } from "@/lib/data/hooks"
+import type { CollageImage } from "@/lib/data/types"
 
 interface MonthlyCollageProps {
   month: string
 }
 
 export function MonthlyCollage({ month }: MonthlyCollageProps) {
-  const [images, setImages] = useState<CollageImage[]>([])
-  const [isDragging, setIsDragging] = useState(false)
+  const { images, setImages } = useMonthlyCollageData(month)
+  const [isDragOver, setIsDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Load images from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(`collage-${month}`)
-    if (saved) {
-      setImages(JSON.parse(saved))
-    }
-  }, [month])
-
-  // Save images to localStorage
-  useEffect(() => {
-    if (images.length > 0) {
-      localStorage.setItem(`collage-${month}`, JSON.stringify(images))
-    }
-  }, [images, month])
+  const canvasRef = useRef<HTMLDivElement>(null)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(true)
+    setIsDragOver(true)
   }, [])
-
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(false)
+    setIsDragOver(false)
   }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-
-    const files = Array.from(e.dataTransfer.files).filter((file) => file.type.startsWith("image/"))
-    if (files.length > 0) {
-      addImages(files)
-    }
-  }, [])
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragOver(false)
+      const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+      if (files.length > 0) addImages(files)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [],
+  )
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter((file) => file.type.startsWith("image/"))
-    if (files.length > 0) {
-      addImages(files)
-    }
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith("image/"))
+    if (files.length > 0) addImages(files)
+    e.target.value = ""
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const addImages = (files: File[]) => {
@@ -72,54 +48,66 @@ export function MonthlyCollage({ month }: MonthlyCollageProps) {
       const reader = new FileReader()
       reader.onload = (e) => {
         const newImage: CollageImage = {
-          id: `${Date.now()}-${index}`,
+          id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
           url: e.target?.result as string,
-          x: Math.random() * 60 + 10,
-          y: Math.random() * 60 + 10,
-          width: Math.random() * 12 + 18,
-          height: Math.random() * 12 + 18,
+          x: Math.random() * 55 + 10,
+          y: Math.random() * 55 + 10,
+          width: Math.random() * 12 + 20,
+          height: Math.random() * 12 + 20,
           rotation: Math.random() * 8 - 4,
-          zIndex: images.length + index,
+          zIndex: 1,
         }
-        setImages((prev) => [...prev, newImage])
+        setImages((prev) => [...prev, { ...newImage, zIndex: prev.length + 1 }])
       }
       reader.readAsDataURL(file)
     })
   }
 
-  const removeImage = (id: string) => {
-    setImages((prev) => prev.filter((img) => img.id !== id))
-  }
+  const removeImage = (id: string) => setImages((prev) => prev.filter((img) => img.id !== id))
 
-  const updateImagePosition = (id: string, x: number, y: number) => {
-    setImages((prev) =>
-      prev.map((img) =>
-        img.id === id ? { ...img, x: Math.max(0, Math.min(80, x)), y: Math.max(0, Math.min(80, y)) } : img,
-      ),
-    )
-  }
+  const updateImagePosition = useCallback(
+    (id: string, x: number, y: number) => {
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, x: Math.max(0, Math.min(80, x)), y: Math.max(0, Math.min(80, y)) } : img,
+        ),
+      )
+    },
+    [setImages],
+  )
+
+  const bringToFront = useCallback(
+    (id: string) => {
+      setImages((prev) => {
+        const max = prev.reduce((m, i) => Math.max(m, i.zIndex), 0)
+        return prev.map((img) => (img.id === id ? { ...img, zIndex: max + 1 } : img))
+      })
+    },
+    [setImages],
+  )
 
   return (
     <div>
-      <h2 className="font-serif text-3xl font-light text-ink mb-6 text-center">Monthly Vision</h2>
+      <h2 className="font-serif text-2xl sm:text-3xl font-light text-ink mb-4 sm:mb-6 text-center">Monthly Vision</h2>
 
       <div
+        ref={canvasRef}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          "relative w-full aspect-[16/9] rounded-lg overflow-hidden transition-all",
-          isDragging
+          "relative w-full aspect-[16/9] rounded-lg overflow-hidden transition-all touch-none",
+          isDragOver
             ? "bg-pacific-blue/20 border-2 border-dashed border-dusk-blue"
             : "bg-gradient-to-br from-grape-soda/15 via-paper to-pacific-blue/15 border border-silver/30",
         )}
       >
         {images.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 text-dusk-blue/70">
-            <Upload className="w-12 h-12" />
-            <div className="text-center space-y-2">
-              <p className="font-serif text-xl">Create your monthly vision</p>
-              <p className="text-sm">Drag images or click to upload</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 sm:gap-6 text-dusk-blue/70 px-4">
+            <Upload className="w-10 h-10 sm:w-12 sm:h-12" />
+            <div className="text-center space-y-1 sm:space-y-2">
+              <p className="font-serif text-lg sm:text-xl">Create your monthly vision</p>
+              <p className="text-sm">Drag images or tap to upload</p>
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -134,8 +122,10 @@ export function MonthlyCollage({ month }: MonthlyCollageProps) {
           <MonthlyCollageImage
             key={image.id}
             image={image}
+            canvasRef={canvasRef}
             onRemove={removeImage}
             onUpdatePosition={updateImagePosition}
+            onActivate={bringToFront}
           />
         ))}
 
@@ -159,46 +149,74 @@ export function MonthlyCollage({ month }: MonthlyCollageProps) {
 
 interface MonthlyCollageImageProps {
   image: CollageImage
+  canvasRef: React.RefObject<HTMLDivElement | null>
   onRemove: (id: string) => void
   onUpdatePosition: (id: string, x: number, y: number) => void
+  onActivate: (id: string) => void
 }
 
-function MonthlyCollageImage({ image, onRemove, onUpdatePosition }: MonthlyCollageImageProps) {
+function MonthlyCollageImage({ image, canvasRef, onRemove, onUpdatePosition, onActivate }: MonthlyCollageImageProps) {
   const [isDragging, setIsDragging] = useState(false)
-  const dragStartPos = useRef({ x: 0, y: 0 })
+  const dragOffsetRef = useRef({ offsetX: 0, offsetY: 0 })
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target instanceof HTMLButtonElement) return
-    setIsDragging(true)
-    const parent = e.currentTarget.parentElement
-    if (!parent) return
-    dragStartPos.current = {
-      x: e.clientX - (image.x * parent.offsetWidth) / 100,
-      y: e.clientY - (image.y * parent.offsetHeight) / 100,
-    }
-  }
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging) return
-      const parent = document.querySelector("[data-monthly-collage]")
-      if (!parent) return
-      const rect = parent.getBoundingClientRect()
-      const x = ((e.clientX - dragStartPos.current.x) / rect.width) * 100
-      const y = ((e.clientY - dragStartPos.current.y) / rect.height) * 100
-      onUpdatePosition(image.id, x, y)
+  const startDrag = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const px = ((clientX - rect.left) / rect.width) * 100
+      const py = ((clientY - rect.top) / rect.height) * 100
+      dragOffsetRef.current = { offsetX: px - image.x, offsetY: py - image.y }
+      setIsDragging(true)
+      onActivate(image.id)
     },
-    [isDragging, image.id, onUpdatePosition],
+    [canvasRef, image.x, image.y, image.id, onActivate],
   )
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-  }, [])
+  useEffect(() => {
+    if (!isDragging) return
+    const handleMove = (e: MouseEvent) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const px = ((e.clientX - rect.left) / rect.width) * 100
+      const py = ((e.clientY - rect.top) / rect.height) * 100
+      onUpdatePosition(image.id, px - dragOffsetRef.current.offsetX, py - dragOffsetRef.current.offsetY)
+    }
+    const handleUp = () => setIsDragging(false)
+    const handleTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0]
+      if (!t) return
+      e.preventDefault()
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const px = ((t.clientX - rect.left) / rect.width) * 100
+      const py = ((t.clientY - rect.top) / rect.height) * 100
+      onUpdatePosition(image.id, px - dragOffsetRef.current.offsetX, py - dragOffsetRef.current.offsetY)
+    }
+    const handleTouchEnd = () => setIsDragging(false)
+
+    document.addEventListener("mousemove", handleMove)
+    document.addEventListener("mouseup", handleUp)
+    document.addEventListener("touchmove", handleTouchMove, { passive: false })
+    document.addEventListener("touchend", handleTouchEnd)
+    document.addEventListener("touchcancel", handleTouchEnd)
+    return () => {
+      document.removeEventListener("mousemove", handleMove)
+      document.removeEventListener("mouseup", handleUp)
+      document.removeEventListener("touchmove", handleTouchMove)
+      document.removeEventListener("touchend", handleTouchEnd)
+      document.removeEventListener("touchcancel", handleTouchEnd)
+    }
+  }, [isDragging, canvasRef, image.id, onUpdatePosition])
 
   return (
     <div
-      data-monthly-collage
-      className={cn("absolute group cursor-move transition-shadow", isDragging ? "z-50 shadow-2xl" : "")}
+      className={cn(
+        "absolute group cursor-grab transition-shadow select-none",
+        isDragging && "cursor-grabbing shadow-2xl",
+      )}
       style={{
         left: `${image.x}%`,
         top: `${image.y}%`,
@@ -206,16 +224,22 @@ function MonthlyCollageImage({ image, onRemove, onUpdatePosition }: MonthlyColla
         height: `${image.height}%`,
         transform: `rotate(${image.rotation}deg)`,
         zIndex: isDragging ? 1000 : image.zIndex,
+        touchAction: "none",
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseDown={(e) => {
+        if (e.target instanceof HTMLButtonElement) return
+        startDrag(e.clientX, e.clientY)
+      }}
+      onTouchStart={(e) => {
+        if (e.target instanceof HTMLButtonElement) return
+        const t = e.touches[0]
+        if (t) startDrag(t.clientX, t.clientY)
+      }}
     >
       <img
         src={image.url || "/placeholder.svg"}
         alt="Monthly collage"
-        className="w-full h-full object-cover rounded-sm shadow-lg"
+        className="w-full h-full object-cover rounded-sm shadow-lg pointer-events-none"
         draggable={false}
       />
       <button
@@ -223,7 +247,8 @@ function MonthlyCollageImage({ image, onRemove, onUpdatePosition }: MonthlyColla
           e.stopPropagation()
           onRemove(image.id)
         }}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-vintage-berry text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-vintage-berry/80"
+        className="absolute -top-2 -right-2 w-7 h-7 bg-vintage-berry text-white rounded-full opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-vintage-berry/80"
+        aria-label="Remove image"
       >
         <X className="w-4 h-4" />
       </button>

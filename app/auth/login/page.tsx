@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useYear } from "@/components/year-provider"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 export default function LoginPage() {
+  const { year } = useYear()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +25,12 @@ export default function LoginPage() {
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
+
+    if (!supabase) {
+      setError("Authentication is not configured. Add your Supabase keys to .env.local to enable login.")
+      setIsLoading(false)
+      return
+    }
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -45,7 +53,7 @@ export default function LoginPage() {
         <Card className="border-silver/20">
           <CardHeader>
             <CardTitle className="text-2xl text-primary">Welcome Back</CardTitle>
-            <CardDescription className="text-muted">Sign in to continue your Becoming 2026 journey</CardDescription>
+            <CardDescription className="text-muted">Sign in to continue your Becoming {year} journey</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin}>

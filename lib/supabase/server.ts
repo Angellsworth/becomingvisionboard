@@ -1,10 +1,19 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
-export async function createClient() {
+function getSupabaseKey(): string | undefined {
+  return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+}
+
+export async function createClient(): Promise<SupabaseClient | null> {
+  const key = getSupabaseKey()
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !key) {
+    return null
+  }
   const cookieStore = await cookies()
 
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, key, {
     cookies: {
       getAll() {
         return cookieStore.getAll()
@@ -13,9 +22,7 @@ export async function createClient() {
         try {
           cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
         } catch {
-          // The "setAll" method was called from a Server Component.
-          // This can be ignored if you have proxy refreshing
-          // user sessions.
+          // Called from a Server Component — proxy refreshes the session, ignore.
         }
       },
     },

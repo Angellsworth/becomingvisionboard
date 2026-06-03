@@ -3,17 +3,12 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, ImageIcon } from "lucide-react"
-
-interface CollageImage {
-  id: string
-  url: string
-  x: number
-  y: number
-  width: number
-  height: number
-  rotation: number
-  zIndex: number
-}
+import { useYear } from "@/components/year-provider"
+import { useAuth } from "@/components/auth-provider"
+import { createBrowserClient } from "@/lib/supabase/client"
+import { local } from "@/lib/data/local"
+import { monthNumberToSlug } from "@/lib/data/months"
+import type { CollageImage } from "@/lib/data/types"
 
 interface MonthData {
   slug: string
@@ -40,18 +35,18 @@ const MONTHS = [
 ]
 
 export function YearOverview() {
+  const { year, ready } = useYear()
+  const { user } = useAuth()
   const [monthsData, setMonthsData] = useState<MonthData[]>([])
 
   useEffect(() => {
-    // Load data from localStorage for all months
-    const data = MONTHS.map((month) => {
-      const imagesStr = localStorage.getItem(`collage-${month.slug}`)
-      const direction = localStorage.getItem(`direction-${month.slug}`) || ""
-      const practicesStr = localStorage.getItem(`practices-${month.slug}`)
+    if (!ready) return
 
-      const images: CollageImage[] = imagesStr ? JSON.parse(imagesStr) : []
-      const practices = practicesStr ? JSON.parse(practicesStr) : []
-
+    // 1. Start with localStorage (instant)
+    const localData = MONTHS.map((month) => {
+      const images = local.getMonthlyCollage(month.slug, year)
+      const direction = local.getDirection(month.slug, year)
+      const practices = local.getPractices(month.slug, year)
       return {
         slug: month.slug,
         name: month.name,
@@ -61,27 +56,86 @@ export function YearOverview() {
         color: month.color,
       }
     })
+    setMonthsData(localData)
 
-    setMonthsData(data)
-  }, [])
+    // 2. If signed in, fetch from cloud and overlay
+    if (!user) return
+    const supabase = createBrowserClient()
+    if (!supabase) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        // Single batched query for all 12 months' monthly_collages rows
+        const { data: monthlyRows } = await supabase
+          .from("monthly_collages")
+          .select("month, direction, images")
+          .eq("user_id", user.id)
+          .eq("year", year)
+
+        // Single batched query for all practices in this year
+        const { data: practiceRows } = await supabase
+          .from("practices")
+          .select("month")
+          .eq("user_id", user.id)
+          .eq("year", year)
+
+        if (cancelled) return
+
+        const monthlyByMonth = new Map<string, { images: CollageImage[]; direction: string }>()
+        for (const row of monthlyRows ?? []) {
+          const slug = monthNumberToSlug(row.month as number)
+          monthlyByMonth.set(slug, {
+            images: (row.images as CollageImage[]) ?? [],
+            direction: (row.direction as string | null) ?? "",
+          })
+        }
+
+        const practicesByMonth = new Map<string, number>()
+        for (const row of practiceRows ?? []) {
+          const slug = monthNumberToSlug(row.month as number)
+          practicesByMonth.set(slug, (practicesByMonth.get(slug) ?? 0) + 1)
+        }
+
+        const merged = MONTHS.map((month) => {
+          const cloudRow = monthlyByMonth.get(month.slug)
+          return {
+            slug: month.slug,
+            name: month.name,
+            images: cloudRow?.images ?? local.getMonthlyCollage(month.slug, year),
+            direction: cloudRow?.direction ?? local.getDirection(month.slug, year),
+            practicesCount: practicesByMonth.get(month.slug) ?? local.getPractices(month.slug, year).length,
+            color: month.color,
+          }
+        })
+        setMonthsData(merged)
+      } catch (e) {
+        console.error("[cloud] year overview fetch failed", e)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // We intentionally re-run when year/user/ready changes; MONTH_SLUGS is a constant import.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, ready, user])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-paper via-lemon-grass/10 to-primrose-pink/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl font-light text-ink mb-4">Year Overview</h1>
+          <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl font-light text-ink mb-4">
+            Year Overview <span className="text-bronze-brown">{year}</span>
+          </h1>
           <p className="text-bronze-brown text-lg">The evolution of your becoming</p>
         </div>
 
-        {/* Timeline Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {monthsData.map((month) => (
             <MonthCard key={month.slug} month={month} />
           ))}
         </div>
 
-        {/* Year Summary */}
         <div className="mt-16 text-center bg-card/30 backdrop-blur-sm rounded-lg p-12 border border-bronze-brown/10">
           <h2 className="font-serif text-4xl font-light text-ink mb-4">A Year of Becoming</h2>
           <div className="flex flex-wrap justify-center gap-8 text-bronze-brown">
@@ -116,7 +170,6 @@ function MonthCard({ month }: MonthCardProps) {
       href={`/months/${month.slug}`}
       className="group block bg-card rounded-lg overflow-hidden border border-bronze-brown/10 hover:border-branded-melon/30 transition-all hover:shadow-lg"
     >
-      {/* Collage Preview */}
       <div className="relative aspect-[16/9] bg-gradient-to-br from-primrose-pink/20 via-paper to-lemon-grass/20 overflow-hidden">
         {month.images.length > 0 ? (
           <div className="absolute inset-0">
@@ -153,7 +206,6 @@ function MonthCard({ month }: MonthCardProps) {
         )}
       </div>
 
-      {/* Month Info */}
       <div className="p-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-serif text-2xl text-ink">{month.name}</h3>
@@ -164,7 +216,7 @@ function MonthCard({ month }: MonthCardProps) {
           <div className="space-y-2 text-sm text-bronze-brown">
             {month.direction && (
               <p className="line-clamp-2 italic text-ink/70">
-                "{month.direction.length > 80 ? `${month.direction.substring(0, 80)}...` : month.direction}"
+                &ldquo;{month.direction.length > 80 ? `${month.direction.substring(0, 80)}...` : month.direction}&rdquo;
               </p>
             )}
             <div className="flex gap-4 text-xs">

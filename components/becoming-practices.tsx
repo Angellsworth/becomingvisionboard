@@ -1,61 +1,39 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Plus, X, Circle, CheckCircle2, Pause } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-interface Practice {
-  id: string
-  text: string
-  isPaused: boolean
-  completedDays: string[] // ISO date strings
-}
+import { usePractices } from "@/lib/data/hooks"
+import type { Practice } from "@/lib/data/types"
 
 interface BecomingPracticesProps {
   month: string
 }
 
 export function BecomingPractices({ month }: BecomingPracticesProps) {
-  const [practices, setPractices] = useState<Practice[]>([])
+  const { practices, setPractices } = usePractices(month)
   const [newPractice, setNewPractice] = useState("")
   const [isAdding, setIsAdding] = useState(false)
 
-  useEffect(() => {
-    const saved = localStorage.getItem(`practices-${month}`)
-    if (saved) {
-      setPractices(JSON.parse(saved))
-    }
-  }, [month])
-
-  useEffect(() => {
-    if (practices.length > 0) {
-      localStorage.setItem(`practices-${month}`, JSON.stringify(practices))
-    }
-  }, [practices, month])
-
   const addPractice = () => {
     if (!newPractice.trim()) return
-
     const practice: Practice = {
       id: `${Date.now()}`,
       text: newPractice,
       isPaused: false,
       completedDays: [],
     }
-
-    setPractices([...practices, practice])
+    setPractices((prev) => [...prev, practice])
     setNewPractice("")
     setIsAdding(false)
   }
 
-  const removePractice = (id: string) => {
-    setPractices(practices.filter((p) => p.id !== id))
-  }
+  const removePractice = (id: string) => setPractices((prev) => prev.filter((p) => p.id !== id))
 
   const togglePractice = (id: string) => {
     const today = new Date().toISOString().split("T")[0]
-    setPractices(
-      practices.map((p) => {
+    setPractices((prev) =>
+      prev.map((p) => {
         if (p.id !== id) return p
         const isCompleted = p.completedDays.includes(today)
         return {
@@ -66,13 +44,11 @@ export function BecomingPractices({ month }: BecomingPracticesProps) {
     )
   }
 
-  const togglePause = (id: string) => {
-    setPractices(practices.map((p) => (p.id === id ? { ...p, isPaused: !p.isPaused } : p)))
-  }
+  const togglePause = (id: string) =>
+    setPractices((prev) => prev.map((p) => (p.id === id ? { ...p, isPaused: !p.isPaused } : p)))
 
-  const updatePracticeText = (id: string, text: string) => {
-    setPractices(practices.map((p) => (p.id === id ? { ...p, text } : p)))
-  }
+  const updatePracticeText = (id: string, text: string) =>
+    setPractices((prev) => prev.map((p) => (p.id === id ? { ...p, text } : p)))
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -171,7 +147,6 @@ function PracticeItem({ practice, onToggle, onRemove, onTogglePause, onUpdateTex
   const today = new Date().toISOString().split("T")[0]
   const isCompletedToday = practice.completedDays.includes(today)
 
-  // Calculate visual depth based on recent completions (last 7 days)
   const recentCompletions = practice.completedDays.filter((date) => {
     const daysDiff = (new Date().getTime() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)
     return daysDiff <= 7
@@ -180,9 +155,7 @@ function PracticeItem({ practice, onToggle, onRemove, onTogglePause, onUpdateTex
   const depthOpacity = Math.min(0.3 + recentCompletions * 0.1, 1)
 
   const handleSaveEdit = () => {
-    if (editText.trim()) {
-      onUpdateText(editText)
-    }
+    if (editText.trim()) onUpdateText(editText)
     setIsEditing(false)
   }
 

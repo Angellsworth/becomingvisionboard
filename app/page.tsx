@@ -1,9 +1,13 @@
+"use client"
+
 import { Navigation } from "@/components/navigation"
 import { RotatingQuote } from "@/components/rotating-quote"
 import { Button } from "@/components/ui/button"
+import { useYear } from "@/components/year-provider"
 import Link from "next/link"
 
 export default function LandingPage() {
+  const { year } = useYear()
   return (
     <>
       <Navigation />
@@ -11,7 +15,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-6 py-24">
           {/* Hero Section */}
           <div className="text-center space-y-6 mb-16">
-            <h1 className="font-serif text-6xl md:text-7xl text-primary leading-tight text-balance">Becoming 2026</h1>
+            <h1 className="font-serif text-6xl md:text-7xl text-primary leading-tight text-balance">Becoming {year}</h1>
             <p className="text-xl md:text-2xl text-foreground/80 leading-relaxed text-pretty max-w-2xl mx-auto">
               A gentle space to visualize your transformation through collages, baby steps, and reflection
             </p>
@@ -93,7 +97,7 @@ export default function LandingPage() {
           {/* Closing */}
           <div className="text-center mt-24 pt-12 border-t border-silver/20">
             <p className="text-lg text-muted/80 max-w-2xl mx-auto leading-relaxed">
-              This is your space to become who you want to be in 2026. No pressure, no gamification—just you, your
+              This is your space to become who you want to be in {year}. No pressure, no gamification—just you, your
               vision, and your baby steps forward.
             </p>
           </div>
