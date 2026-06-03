@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AudioToggle } from "@/components/audio-toggle"
+import { WordmarkSparkles } from "@/components/wordmark-sparkles"
 
 /**
  * Six sections of the app:
@@ -65,7 +66,7 @@ function AppNav({ pathname, user }: AppNavProps) {
           href="/home"
           className="font-display text-2xl tracking-[0.18em] text-foreground hover:text-primary transition-colors"
         >
-          Becoming
+          <WordmarkSparkles>Becoming</WordmarkSparkles>
         </Link>
         <div className="flex items-center gap-1">
           {SECTIONS.map(({ path, label, icon: Icon }) => (
@@ -94,7 +95,7 @@ function AppNav({ pathname, user }: AppNavProps) {
       {/* === Mobile top bar === */}
       <nav className="fixed top-0 inset-x-0 z-40 md:hidden h-14 flex items-center justify-between px-5 bg-background/80 backdrop-blur-xl border-b border-border">
         <Link href="/home" className="font-display text-xl tracking-[0.18em] text-foreground">
-          Becoming
+          <WordmarkSparkles>Becoming</WordmarkSparkles>
         </Link>
         <div className="flex items-center gap-1">
           <AudioToggle />
@@ -172,7 +173,7 @@ function PublicNav() {
         href="/"
         className="font-display text-xl md:text-2xl tracking-[0.18em] text-foreground hover:text-primary transition-colors"
       >
-        Becoming
+        <WordmarkSparkles>Becoming</WordmarkSparkles>
       </Link>
       <div className="flex items-center gap-1 md:gap-2">
         <AudioToggle />

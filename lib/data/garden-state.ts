@@ -29,6 +29,9 @@ export const PHASES: GardenPhase[] = [
   { min: 12, name: "Blooming", whisper: "A roof. A door. Tending becomes you." },
   { min: 22, name: "Tended", whisper: "Windows lit. The bees know your name." },
   { min: 38, name: "Sanctuary", whisper: "Smoke from the chimney. A whole life of you." },
+  { min: 50, name: "Hearth", whisper: "Window boxes, planted by your own hands." },
+  { min: 75, name: "Grove", whisper: "An apple tree. A bird on the chimney. Time, taking root." },
+  { min: 110, name: "Lit", whisper: "Lanterns at the path. Roses on the wall." },
 ]
 
 /**
@@ -40,8 +43,14 @@ export const PHASES: GardenPhase[] = [
  *   3 — roof
  *   4 — chimney + first window
  *   5 — smoke + second window + vines on the walls
+ *   6 — window boxes with little flowers
+ *   7 — apple tree + bird on the chimney + welcome step
+ *   8 — wall-mounted door lantern + path lantern + climbing roses
  */
 export function houseStageFor(tokens: number): number {
+  if (tokens >= 110) return 8
+  if (tokens >= 75) return 7
+  if (tokens >= 50) return 6
   if (tokens >= 38) return 5
   if (tokens >= 22) return 4
   if (tokens >= 12) return 3

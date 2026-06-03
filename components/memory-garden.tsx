@@ -646,6 +646,110 @@ function House({ x, groundY, stage }: HouseProps) {
           <ellipse cx="0" cy="-91" rx="6" ry="2" fill={vine} opacity={0.8} />
         </>
       )}
+
+      {/* Stage 6 — window boxes with tiny flowers under both windows */}
+      {stage >= 6 && (
+        <>
+          {/* Left box */}
+          <rect x="-60" y="-118" width="28" height="7" fill={stoneDark} />
+          <rect x="-60" y="-119" width="28" height="2" fill={stone} />
+          <circle cx="-54" cy="-122" r="2.4" fill="#d84565" />
+          <circle cx="-46" cy="-123" r="2.6" fill="#e8a13a" />
+          <circle cx="-38" cy="-122" r="2.4" fill="#b59bc8" />
+          {/* Right box */}
+          <rect x="32" y="-118" width="28" height="7" fill={stoneDark} />
+          <rect x="32" y="-119" width="28" height="2" fill={stone} />
+          <circle cx="38" cy="-122" r="2.4" fill="#e3c47a" />
+          <circle cx="46" cy="-123" r="2.6" fill="#d84565" />
+          <circle cx="54" cy="-122" r="2.4" fill="#7c9468" />
+        </>
+      )}
+
+      {/* Stage 7 — apple tree, bird on chimney, welcome step */}
+      {stage >= 7 && (
+        <>
+          {/* Welcome step at the door */}
+          <rect x="-22" y="-32" width="44" height="6" fill={stoneDark} />
+          <rect x="-22" y="-33" width="44" height="1.5" fill={stone} />
+
+          {/* Apple tree, off to the right of the house */}
+          <g transform="translate(250, 0)">
+            {/* Trunk */}
+            <rect x={-5} y={-50} width={10} height={50} fill="#5b3e2f" />
+            {/* Canopy — three overlapping circles for soft cottagey shape */}
+            <circle cx={-18} cy={-65} r={28} fill="#6a8a55" />
+            <circle cx={18} cy={-65} r={28} fill="#6a8a55" />
+            <circle cx={0} cy={-82} r={32} fill="#7c9468" />
+            <circle cx={0} cy={-60} r={26} fill="#7c9468" opacity={0.6} />
+            {/* Apples */}
+            {[
+              [-14, -70],
+              [12, -78],
+              [-4, -90],
+              [18, -58],
+              [-22, -55],
+              [6, -54],
+            ].map(([cx, cy], i) => (
+              <circle key={i} cx={cx} cy={cy} r={3} fill="#d84565" />
+            ))}
+            {/* Subtle shadow under tree */}
+            <ellipse cx={0} cy={2} rx={28} ry={3} fill="#2a1929" opacity={0.18} />
+          </g>
+
+          {/* Bird perched on chimney cap */}
+          <g transform="translate(-52, -242)">
+            <ellipse cx={0} cy={0} rx={5.5} ry={3.5} fill="#2a1929" />
+            <path d="M 4 -2 L 8 -3 L 6 0 Z" fill="#2a1929" />
+            <circle cx={5} cy={-2.5} r={0.6} fill="#e3c47a" />
+            {/* tiny tail */}
+            <path d="M -5 -1 L -9 -3 L -6 1 Z" fill="#2a1929" />
+          </g>
+        </>
+      )}
+
+      {/* Stage 8 — door lantern + path lantern + climbing roses */}
+      {stage >= 8 && (
+        <>
+          {/* Wall-mounted lantern beside the door */}
+          <g transform="translate(28, -86)">
+            <rect x={-1} y={0} width={2} height={6} fill={stoneDark} />
+            <rect x={-5} y={6} width={10} height={12} fill={stoneDark} />
+            <circle cx={0} cy={12} r={3.5} fill="#e3c47a" />
+            {/* Glow halo */}
+            <circle cx={0} cy={12} r={9} fill="#e3c47a" opacity={0.28} />
+            <circle cx={0} cy={12} r={16} fill="#e3c47a" opacity={0.12} />
+          </g>
+
+          {/* Path lantern out front */}
+          <g transform="translate(-138, 78)">
+            <line x1={0} y1={0} x2={0} y2={-30} stroke={stoneDark} strokeWidth={2} />
+            <rect x={-5} y={-40} width={10} height={12} fill={stoneDark} />
+            <circle cx={0} cy={-34} r={3} fill="#e3c47a" />
+            <circle cx={0} cy={-34} r={8} fill="#e3c47a" opacity={0.3} />
+            <circle cx={0} cy={-34} r={14} fill="#e3c47a" opacity={0.12} />
+          </g>
+
+          {/* Climbing roses — pink + red dots layered up the walls */}
+          <g opacity={0.9}>
+            {[
+              [-86, -100, 3.5, "#d84565"],
+              [-80, -110, 3, "#e8b4b8"],
+              [-88, -120, 2.5, "#d84565"],
+              [-82, -132, 3, "#a83648"],
+              [-86, -145, 2.5, "#e8b4b8"],
+              [-78, -158, 3, "#d84565"],
+              [86, -102, 3.5, "#d84565"],
+              [80, -112, 3, "#e8b4b8"],
+              [88, -122, 2.5, "#a83648"],
+              [82, -134, 3, "#d84565"],
+              [86, -147, 2.5, "#e8b4b8"],
+              [78, -158, 3, "#a83648"],
+            ].map(([cx, cy, r, c], i) => (
+              <circle key={i} cx={cx as number} cy={cy as number} r={r as number} fill={c as string} />
+            ))}
+          </g>
+        </>
+      )}
     </g>
   )
 }

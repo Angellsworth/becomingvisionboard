@@ -4,8 +4,10 @@ import { useCallback, useMemo, useState } from "react"
 import { Plus, Target } from "lucide-react"
 import { ProjectCard } from "@/components/project-card"
 import { ProjectEditor } from "@/components/project-editor"
+import { PetalConfetti } from "@/components/petal-confetti"
 import {
   CATEGORIES,
+  categoryInfo,
   useProjects,
   type LifeProject,
   type Milestone,
@@ -21,6 +23,9 @@ export function LifeProjects() {
   const [filter, setFilter] = useState<Filter>("all")
   // undefined = closed, null = new, LifeProject = editing
   const [editorState, setEditorState] = useState<LifeProject | null | undefined>(undefined)
+  // Confetti trigger: increment to fire a new burst; track the colour to use.
+  const [confettiKey, setConfettiKey] = useState(0)
+  const [confettiColor, setConfettiColor] = useState<string>("#d84565")
 
   const openNew = useCallback(() => setEditorState(null), [])
   const openEdit = useCallback((p: LifeProject) => setEditorState(p), [])
@@ -35,10 +40,18 @@ export function LifeProjects() {
       progress: number
       milestones: Milestone[]
     }) => {
+      // Detect a not-yet-complete → complete transition for the confetti burst.
+      const wasComplete = editorState?.status === "completed"
+      const willComplete = draft.status === "completed"
+
       if (editorState === null) {
         add(draft)
       } else if (editorState) {
         update(editorState.id, draft)
+      }
+      if (!wasComplete && willComplete) {
+        setConfettiColor(categoryInfo(draft.category).tint)
+        setConfettiKey((k) => k + 1)
       }
       closeEditor()
     },
@@ -155,6 +168,9 @@ export function LifeProjects() {
         onSave={handleSave}
         onDelete={editorState ? handleDelete : undefined}
       />
+
+      {/* ─── Celebration ─── */}
+      <PetalConfetti triggerKey={confettiKey} color={confettiColor} />
     </div>
   )
 }

@@ -90,7 +90,9 @@ export function HomeDashboard() {
   const greetingFull = firstName ? `${greeting}, ${cap(firstName)}.` : `${greeting}.`
 
   return (
-    <div className="max-w-6xl mx-auto px-5 md:px-8 pt-6 md:pt-10 pb-12 md:pb-16">
+    <div className="relative max-w-6xl mx-auto px-5 md:px-8 pt-6 md:pt-10 pb-12 md:pb-16">
+      {/* Wandering bee — drifts diagonally across the dashboard, slowly */}
+      <WanderingBee />
       {/* ─── Hero ────────────────────────────────────────────────── */}
       <header className="mb-8 md:mb-12">
         <div className="flex items-center gap-3 mb-3 md:mb-4">
@@ -151,9 +153,9 @@ export function HomeDashboard() {
         <GardenPreviewCard />
       </section>
 
-      {/* ─── Daily quote ──────────────────────────────────────────── */}
+      {/* ─── Daily quote — paper flutter on hover ─── */}
       <section className="mb-8 md:mb-12">
-        <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm px-6 md:px-10 py-8 md:py-12">
+        <div className="quote-card rounded-2xl border border-border bg-card/50 backdrop-blur-sm px-6 md:px-10 py-8 md:py-12">
           <p className="text-[11px] tracking-[0.3em] uppercase text-primary mb-4">
             Today's quote
           </p>
@@ -265,6 +267,75 @@ function WayfindCard({ href, label, hint }: { href: string; label: string; hint:
       </span>
       <span className="text-xs text-foreground/55 tracking-wide">{hint}</span>
     </Link>
+  )
+}
+
+// --- Wandering bee + paper flutter ---------------------------------------
+
+/**
+ * A tiny bee that drifts diagonally across the dashboard background
+ * once every minute or so. Same character as the garden bees. Low
+ * opacity, behind the cards (pointer-events-none).
+ */
+function WanderingBee() {
+  return (
+    <>
+      <div className="wander-bee pointer-events-none absolute z-0" aria-hidden>
+        <svg width="28" height="28" viewBox="-12 -10 24 20">
+          <g>
+            <ellipse cx={-3} cy={-4} rx={4.5} ry={2.5} fill="white" opacity={0.6} />
+            <ellipse cx={3} cy={-4} rx={4.5} ry={2.5} fill="white" opacity={0.6} />
+            <ellipse rx={6} ry={4} fill="#2a1929" />
+            <rect x={-4} y={-3} width={1.8} height={6} fill="#e3c47a" />
+            <rect x={-0.5} y={-3} width={1.8} height={6} fill="#e3c47a" />
+            <rect x={3} y={-3} width={1.4} height={5} fill="#e3c47a" />
+          </g>
+        </svg>
+      </div>
+      <style jsx>{`
+        :global(.wander-bee) {
+          top: 0;
+          left: 0;
+          opacity: 0;
+          animation: wander-bee-drift 65s ease-in-out infinite;
+        }
+        @keyframes wander-bee-drift {
+          0% {
+            transform: translate(-40px, 80px);
+            opacity: 0;
+          }
+          8% {
+            opacity: 0.55;
+          }
+          25% {
+            transform: translate(28vw, 120px);
+          }
+          50% {
+            transform: translate(60vw, 220px);
+            opacity: 0.55;
+          }
+          72% {
+            opacity: 0.4;
+            transform: translate(82vw, 140px);
+          }
+          80% {
+            opacity: 0;
+          }
+          100% {
+            transform: translate(110vw, 220px);
+            opacity: 0;
+          }
+        }
+        :global(.quote-card) {
+          transition: transform 450ms ease, box-shadow 450ms ease;
+          will-change: transform;
+        }
+        :global(.quote-card:hover) {
+          transform: rotate(-1.2deg) translateY(-4px);
+          box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 12%, transparent);
+        }
+      `}</style>
+    </>
   )
 }
 
