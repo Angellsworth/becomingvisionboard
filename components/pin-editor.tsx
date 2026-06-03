@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { X, ImageUp, Trash2, RotateCcw, ExternalLink } from "lucide-react"
+import { X, ImageUp, Trash2, RotateCcw, ExternalLink, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   DEFAULT_SIZE,
@@ -9,6 +9,7 @@ import {
   type BoardItem,
   type PinSize,
 } from "@/lib/data/board-types"
+import { compressImageFile } from "@/lib/image-compress"
 
 interface PinDraft {
   imageUrl: string
@@ -38,6 +39,7 @@ export function PinEditor({ state, onClose, onSave, onDelete }: PinEditorProps) 
   const open = state !== undefined
   const isNew = state === null
   const [draft, setDraft] = useState<PinDraft>(EMPTY)
+  const [processing, setProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Sync the form to whatever opened (new vs. existing).
@@ -79,19 +81,22 @@ export function PinEditor({ state, onClose, onSave, onDelete }: PinEditorProps) 
 
   const handlePickFile = () => fileInputRef.current?.click()
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = "" // allow re-picking same file
     if (!file || !file.type.startsWith("image/")) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const url = ev.target?.result as string
-      if (url) setField("imageUrl", url)
+    setProcessing(true)
+    try {
+      const url = await compressImageFile(file)
+      setField("imageUrl", url)
+    } catch (err) {
+      console.error("[pin-editor] image processing failed", err)
+    } finally {
+      setProcessing(false)
     }
-    reader.readAsDataURL(file)
   }
 
-  const canSave = draft.imageUrl.length > 0
+  const canSave = draft.imageUrl.length > 0 && !processing
   const sizes: PinSize[] = ["small", "medium", "large"]
 
   return (
@@ -135,7 +140,12 @@ export function PinEditor({ state, onClose, onSave, onDelete }: PinEditorProps) 
           {/* Image preview + replace */}
           <div>
             <p className="text-[10px] tracking-[0.25em] uppercase text-foreground/50 mb-2">Image</p>
-            {draft.imageUrl ? (
+            {processing ? (
+              <div className="w-full rounded-2xl border-2 border-dashed border-primary/40 bg-muted/40 py-16 flex flex-col items-center gap-3 text-foreground/70">
+                <Loader2 className="w-7 h-7 animate-spin text-primary" />
+                <span className="text-sm">Optimizing image…</span>
+              </div>
+            ) : draft.imageUrl ? (
               <div className="relative rounded-2xl border border-border bg-muted/40 p-3 flex flex-col items-center gap-3">
                 <div className="max-h-64 w-full overflow-hidden rounded-xl flex items-center justify-center bg-card">
                   <img

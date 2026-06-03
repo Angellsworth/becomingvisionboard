@@ -1,10 +1,12 @@
 // localStorage CRUD for the Becoming Board.
 // One key holds the full array, JSON-encoded. Items are sorted newest-first.
 
+import { compressDataUrl, approxByteSize } from "@/lib/image-compress"
 import { DEFAULT_SIZE, type BoardItem } from "./board-types"
 
 const STORAGE_KEY = "becoming-board-items"
 const MIGRATION_KEY = "becoming-board-migrated-v1"
+const SHRINK_KEY = "becoming-board-shrunk-v1"
 
 function read(): BoardItem[] {
   if (typeof window === "undefined") return []
@@ -18,13 +20,18 @@ function read(): BoardItem[] {
   }
 }
 
-function write(items: BoardItem[]): void {
-  if (typeof window === "undefined") return
+/**
+ * Persist the board. Returns false on quota error so the caller can
+ * surface a user-visible message instead of dropping the write silently.
+ */
+function write(items: BoardItem[]): boolean {
+  if (typeof window === "undefined") return false
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-  } catch {
-    // Quota errors etc. — surface in console only.
-    console.warn("[board] write failed (quota?)")
+    return true
+  } catch (e) {
+    console.warn("[board] write failed (quota?)", e)
+    return false
   }
 }
 
@@ -33,7 +40,8 @@ export const board = {
     return read().sort((a, b) => b.createdAt - a.createdAt)
   },
 
-  add(partial: Omit<BoardItem, "id" | "createdAt" | "updatedAt">): BoardItem {
+  /** Returns the new item, or null if the write was rejected (quota). */
+  add(partial: Omit<BoardItem, "id" | "createdAt" | "updatedAt">): BoardItem | null {
     const now = Date.now()
     const item: BoardItem = {
       ...partial,
@@ -41,17 +49,18 @@ export const board = {
       createdAt: now,
       updatedAt: now,
     }
-    write([item, ...read()])
+    if (!write([item, ...read()])) return null
     return item
   },
 
+  /** Returns updated item, or null on quota error / missing id. */
   update(id: string, patch: Partial<Omit<BoardItem, "id" | "createdAt">>): BoardItem | null {
     const items = read()
     const idx = items.findIndex((it) => it.id === id)
     if (idx === -1) return null
     const updated: BoardItem = { ...items[idx], ...patch, id, updatedAt: Date.now() }
     items[idx] = updated
-    write(items)
+    if (!write(items)) return null
     return updated
   },
 
@@ -68,18 +77,12 @@ export const board = {
 /**
  * One-shot migration that seeds the Becoming Board with images saved
  * in the legacy annual-collage localStorage keys. Idempotent.
- *
- * The board is meant to be a lifetime canvas, so we collect images
- * across every year we find and stamp them into the new structure.
- * Positions/rotations/sizes get sensible defaults — the editorial
- * intent of an old layout doesn't carry forward, but the photos do.
  */
 export function migrateAnnualCollagesToBoard(): void {
   if (typeof window === "undefined") return
   try {
     if (localStorage.getItem(MIGRATION_KEY)) return
 
-    // Collect every old annual collage image across all years.
     const collected: { url: string; year: number }[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
@@ -100,7 +103,6 @@ export function migrateAnnualCollagesToBoard(): void {
       }
     }
 
-    // Stamp them into the board in age order (oldest first → bottom of feed).
     const existing = read()
     if (collected.length > 0 && existing.length === 0) {
       const base = Date.now() - collected.length * 1000
@@ -114,7 +116,6 @@ export function migrateAnnualCollagesToBoard(): void {
         createdAt: base + i,
         updatedAt: base + i,
       }))
-      // Newest at top — reverse so legacy items appear at the bottom.
       write([...seeded].reverse())
     }
 
@@ -122,4 +123,51 @@ export function migrateAnnualCollagesToBoard(): void {
   } catch {
     // ignore
   }
+}
+
+/**
+ * Second-pass migration: recompress any existing pin whose image is
+ * larger than a soft cap. Idempotent — sets SHRINK_KEY when done.
+ *
+ * This frees up localStorage for users (early testers) who pinned
+ * uncompressed phone photos before client-side compression was added.
+ */
+export async function shrinkOversizedPins(): Promise<{ shrunk: number; bytesSaved: number }> {
+  if (typeof window === "undefined") return { shrunk: 0, bytesSaved: 0 }
+  if (localStorage.getItem(SHRINK_KEY)) return { shrunk: 0, bytesSaved: 0 }
+
+  const SOFT_CAP_BYTES = 300_000 // 300 KB — anything larger gets recompressed
+  const items = read()
+  if (items.length === 0) {
+    localStorage.setItem(SHRINK_KEY, "1")
+    return { shrunk: 0, bytesSaved: 0 }
+  }
+
+  let shrunk = 0
+  let bytesSaved = 0
+  const updated: BoardItem[] = []
+  for (const item of items) {
+    const beforeBytes = approxByteSize(item.imageUrl)
+    if (beforeBytes > SOFT_CAP_BYTES) {
+      try {
+        const next = await compressDataUrl(item.imageUrl)
+        const afterBytes = approxByteSize(next)
+        if (afterBytes < beforeBytes) {
+          updated.push({ ...item, imageUrl: next })
+          shrunk += 1
+          bytesSaved += beforeBytes - afterBytes
+          continue
+        }
+      } catch {
+        // fall through and keep original
+      }
+    }
+    updated.push(item)
+  }
+
+  if (shrunk > 0) {
+    write(updated)
+  }
+  localStorage.setItem(SHRINK_KEY, "1")
+  return { shrunk, bytesSaved }
 }

@@ -1,10 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Plus, Frame } from "lucide-react"
+import { Plus, Frame, AlertTriangle, X } from "lucide-react"
 import { BoardPin } from "@/components/board-pin"
 import { PinEditor } from "@/components/pin-editor"
-import { board, migrateAnnualCollagesToBoard } from "@/lib/data/board-storage"
+import { board, migrateAnnualCollagesToBoard, shrinkOversizedPins } from "@/lib/data/board-storage"
 import type { BoardItem, PinSize } from "@/lib/data/board-types"
 
 /**
@@ -17,17 +17,32 @@ export function BecomingBoard() {
   const [items, setItems] = useState<BoardItem[]>([])
   const [hydrated, setHydrated] = useState(false)
 
-  // `editorState` is the editor visibility model:
-  // - undefined → editor is closed
-  // - null      → editor is open in "new pin" mode
-  // - BoardItem → editor is open in "edit this pin" mode
+  // Editor visibility model:
+  // - undefined → closed
+  // - null      → new pin
+  // - BoardItem → editing existing
   const [editorState, setEditorState] = useState<BoardItem | null | undefined>(undefined)
 
-  // Hydrate from localStorage; run one-shot migration from old annual collages.
+  // Toast for storage failures.
+  const [storageError, setStorageError] = useState<string | null>(null)
+
+  // Hydrate from localStorage. Run both migrations:
+  // - v1: seed from legacy annual_collage data
+  // - v1 shrink: recompress any oversized images so quota doesn't bite later
   useEffect(() => {
+    let cancelled = false
     migrateAnnualCollagesToBoard()
     setItems(board.list())
     setHydrated(true)
+    ;(async () => {
+      const { shrunk } = await shrinkOversizedPins()
+      if (!cancelled && shrunk > 0) {
+        setItems(board.list())
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const openNew = useCallback(() => setEditorState(null), [])
@@ -42,13 +57,19 @@ export function BecomingBoard() {
       size: PinSize
       rotation: number
     }) => {
-      if (editorState === null) {
-        // New pin
-        board.add(draft)
-      } else if (editorState) {
-        // Edit existing
-        board.update(editorState.id, draft)
+      const result =
+        editorState === null
+          ? board.add(draft)
+          : editorState
+            ? board.update(editorState.id, draft)
+            : null
+      if (!result) {
+        setStorageError(
+          "Storage is full. Try removing a few pins or using smaller images, then add again.",
+        )
+        return
       }
+      setStorageError(null)
       setItems(board.list())
       closeEditor()
     },
@@ -64,7 +85,6 @@ export function BecomingBoard() {
 
   const empty = hydrated && items.length === 0
 
-  // Memoize the rendered pins so swapping a single pin doesn't re-render all.
   const renderedPins = useMemo(
     () =>
       items.map((item) => (
@@ -75,7 +95,6 @@ export function BecomingBoard() {
 
   return (
     <div className="max-w-6xl mx-auto px-5 md:px-8 pt-6 md:pt-10 pb-24 md:pb-16">
-      {/* ─── Header ─── */}
       <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-3">
@@ -101,30 +120,40 @@ export function BecomingBoard() {
         </button>
       </header>
 
-      {/* ─── Masonry ─── */}
+      {/* Storage warning toast */}
+      {storageError && (
+        <div className="mb-6 flex items-start gap-3 p-4 rounded-2xl border border-destructive/40 bg-destructive/10 text-foreground">
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+          <p className="text-sm flex-1 leading-relaxed">{storageError}</p>
+          <button
+            type="button"
+            onClick={() => setStorageError(null)}
+            className="text-foreground/50 hover:text-foreground"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {empty ? (
         <EmptyState onAdd={openNew} />
       ) : (
-        <div
-          className="columns-2 sm:columns-3 lg:columns-4 gap-3 md:gap-4"
-          style={{ columnFill: "balance" }}
-        >
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 md:gap-4" style={{ columnFill: "balance" }}>
           {renderedPins}
         </div>
       )}
 
-      {/* ─── Mobile floating add button ─── */}
       <button
         type="button"
         onClick={openNew}
-        className="md:hidden fixed right-5 bottom-24 z-30 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center hover:opacity-90 transition-opacity"
+        className="md:hidden fixed right-5 z-30 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center hover:opacity-90 transition-opacity"
         style={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }}
         aria-label="Add a pin"
       >
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* ─── Editor modal ─── */}
       <PinEditor
         state={editorState}
         onClose={closeEditor}
@@ -134,8 +163,6 @@ export function BecomingBoard() {
     </div>
   )
 }
-
-// --- Empty state -----------------------------------------------------------
 
 interface EmptyStateProps {
   onAdd: () => void
