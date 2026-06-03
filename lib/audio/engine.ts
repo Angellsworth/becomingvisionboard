@@ -1,26 +1,19 @@
-// Procedural Web Audio engine.
+// Procedural Web Audio engine + background music player.
 //
-// Everything is synthesized in the browser — no audio files. The sound
-// palette is deliberately small:
-// - One ethereal pentatonic pad ("ambient") for the Garden page.
-// - Three short chimes for actions: bloom (new entry), complete
-//   (project done), tick (milestone checked).
-//
-// Browsers block AudioContext from starting without a user gesture.
-// We create the context lazily and resume it on every call; the first
-// user interaction unlocks it.
+// SFX (bloom / complete / tick) are synthesized — small chimes that
+// don't need files. Background music is an audio file you drop into
+// /public/audio/garden.mp3 (intended for Vivaldi's The Four Seasons,
+// but any music works). The file loops while the user is on the
+// Memory Garden page and the audio toggle is on.
 
 type SoundName = "bloom" | "complete" | "tick"
-
-interface AmbientHandle {
-  stop: () => void
-}
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let enabled = false
 let masterVolume = 0.45 // 0..1
-let currentAmbient: AmbientHandle | null = null
+
+// --- AudioContext --------------------------------------------------------
 
 function getContext(): AudioContext | null {
   if (typeof window === "undefined") return null
@@ -45,9 +38,8 @@ function getContext(): AudioContext | null {
 
 export function setAudioEnabled(value: boolean) {
   enabled = value
-  if (!value && currentAmbient) {
-    currentAmbient.stop()
-    currentAmbient = null
+  if (!value) {
+    stopMusic()
   }
 }
 
@@ -58,13 +50,17 @@ export function isAudioEnabled(): boolean {
 export function setVolume(value: number) {
   masterVolume = Math.max(0, Math.min(1, value))
   if (master) master.gain.value = masterVolume
+  // Apply to any music currently playing too.
+  if (musicAudio && musicAudio.volume > 0) {
+    musicAudio.volume = masterVolume
+  }
 }
 
 export function getVolume(): number {
   return masterVolume
 }
 
-// --- Action sounds --------------------------------------------------------
+// --- Action sounds (synthesized) -----------------------------------------
 
 export function playSound(name: SoundName): void {
   if (!enabled) return
@@ -85,24 +81,20 @@ export function playSound(name: SoundName): void {
 
 function playBloom(c: AudioContext, dest: AudioNode) {
   const now = c.currentTime
-  const notes = [523.25, 659.25, 783.99] // C5 E5 G5 — gentle major triad up
+  const notes = [523.25, 659.25, 783.99]
   notes.forEach((freq, i) => {
     const osc = c.createOscillator()
     osc.type = "sine"
     osc.frequency.value = freq
-
-    // Soft lowpass for warmth
     const filter = c.createBiquadFilter()
     filter.type = "lowpass"
     filter.frequency.value = 2200
     filter.Q.value = 0.4
-
     const gain = c.createGain()
     const start = now + i * 0.09
     gain.gain.setValueAtTime(0, start)
     gain.gain.linearRampToValueAtTime(0.18, start + 0.04)
     gain.gain.exponentialRampToValueAtTime(0.001, start + 1.3)
-
     osc.connect(filter)
     filter.connect(gain)
     gain.connect(dest)
@@ -113,23 +105,20 @@ function playBloom(c: AudioContext, dest: AudioNode) {
 
 function playComplete(c: AudioContext, dest: AudioNode) {
   const now = c.currentTime
-  const notes = [392.0, 587.33, 783.99] // G4 D5 G5 — open chord, warm bell
+  const notes = [392.0, 587.33, 783.99]
   notes.forEach((freq, i) => {
     const osc = c.createOscillator()
     osc.type = "sine"
     osc.frequency.value = freq
-
     const filter = c.createBiquadFilter()
     filter.type = "lowpass"
     filter.frequency.value = 1800
     filter.Q.value = 0.3
-
     const gain = c.createGain()
     const start = now + i * 0.07
     gain.gain.setValueAtTime(0, start)
     gain.gain.linearRampToValueAtTime(0.16, start + 0.03)
     gain.gain.exponentialRampToValueAtTime(0.001, start + 2.4)
-
     osc.connect(filter)
     filter.connect(gain)
     gain.connect(dest)
@@ -142,7 +131,7 @@ function playTick(c: AudioContext, dest: AudioNode) {
   const now = c.currentTime
   const osc = c.createOscillator()
   osc.type = "sine"
-  osc.frequency.value = 880 // A5
+  osc.frequency.value = 880
   const filter = c.createBiquadFilter()
   filter.type = "lowpass"
   filter.frequency.value = 2400
@@ -158,117 +147,108 @@ function playTick(c: AudioContext, dest: AudioNode) {
   osc.stop(now + 0.4)
 }
 
-// --- Ambient pad ----------------------------------------------------------
+// --- Background music (audio file) ---------------------------------------
 
-// Pentatonic-ish pad voiced low to give Monument Valley calm.
-// Each note: sine oscillator → lowpass → gain → master.
-// A slow random LFO detunes each note by a few Hz so the chord breathes.
-const PAD_NOTES = [
-  130.81, // C3
-  196.0, // G3
-  261.63, // C4
-  329.63, // E4
-  392.0, // G4
-  523.25, // C5
-]
+const MUSIC_URL = "/audio/garden.mp3"
+const FADE_IN_MS = 3000
+const FADE_OUT_MS = 1000
 
-export function startAmbient(): AmbientHandle | null {
-  if (!enabled) return null
-  const c = getContext()
-  if (!c || !master) return null
-  if (currentAmbient) return currentAmbient // already running
+let musicAudio: HTMLAudioElement | null = null
+let fadeTimer: number | null = null
+let musicError = false
+const musicErrorListeners = new Set<(loaded: boolean) => void>()
 
-  const now = c.currentTime
-  const oscs: OscillatorNode[] = []
-  const lfos: OscillatorNode[] = []
-  const gains: GainNode[] = []
-  const fadeIn = 4.0
-
-  PAD_NOTES.forEach((freq, i) => {
-    const osc = c.createOscillator()
-    osc.type = "sine"
-    osc.frequency.value = freq
-
-    // Slow LFO for organic detune
-    const lfo = c.createOscillator()
-    lfo.type = "sine"
-    // Different super-slow rates per note keep the chord shimmering
-    lfo.frequency.value = 0.04 + i * 0.018
-    const lfoDepth = c.createGain()
-    lfoDepth.gain.value = 1.2 + i * 0.4 // Hz of detune
-    lfo.connect(lfoDepth)
-    lfoDepth.connect(osc.frequency)
-
-    // Mild lowpass for warmth, opens slightly with index so high notes still glimmer
-    const filter = c.createBiquadFilter()
-    filter.type = "lowpass"
-    filter.frequency.value = 600 + i * 220
-    filter.Q.value = 0.6
-
-    // Gentle pan spread so the chord opens stereo
-    const panner = c.createStereoPanner ? c.createStereoPanner() : null
-    if (panner) {
-      panner.pan.value = (i / (PAD_NOTES.length - 1)) * 1.2 - 0.6
-    }
-
-    const gain = c.createGain()
-    // Quieter than the chime so it doesn't dominate; lower notes louder.
-    const target = 0.055 - i * 0.005
-    gain.gain.setValueAtTime(0, now)
-    gain.gain.linearRampToValueAtTime(target, now + fadeIn)
-
-    osc.connect(filter)
-    filter.connect(gain)
-    if (panner) {
-      gain.connect(panner)
-      panner.connect(master)
-    } else {
-      gain.connect(master)
-    }
-
-    osc.start(now)
-    lfo.start(now)
-    oscs.push(osc)
-    lfos.push(lfo)
-    gains.push(gain)
-  })
-
-  const handle: AmbientHandle = {
-    stop: () => {
-      const stopNow = c.currentTime
-      const fadeOut = 1.2
-      gains.forEach((g) => {
-        g.gain.cancelScheduledValues(stopNow)
-        g.gain.setValueAtTime(g.gain.value, stopNow)
-        g.gain.linearRampToValueAtTime(0, stopNow + fadeOut)
-      })
-      // Stop oscillators after the fade so the ramp completes.
-      window.setTimeout(() => {
-        oscs.forEach((o) => {
-          try {
-            o.stop()
-          } catch {
-            // already stopped
-          }
-        })
-        lfos.forEach((l) => {
-          try {
-            l.stop()
-          } catch {
-            // already stopped
-          }
-        })
-      }, fadeOut * 1000 + 200)
-      if (currentAmbient === handle) currentAmbient = null
-    },
+function clearFade() {
+  if (fadeTimer !== null) {
+    window.clearInterval(fadeTimer)
+    fadeTimer = null
   }
-  currentAmbient = handle
-  return handle
 }
 
-export function stopAmbient(): void {
-  if (currentAmbient) {
-    currentAmbient.stop()
-    currentAmbient = null
+function getMusicAudio(): HTMLAudioElement | null {
+  if (typeof window === "undefined") return null
+  if (musicAudio) return musicAudio
+  try {
+    const a = new Audio(MUSIC_URL)
+    a.loop = true
+    a.preload = "auto"
+    a.volume = 0
+    a.addEventListener("error", () => {
+      musicError = true
+      musicErrorListeners.forEach((cb) => cb(false))
+    })
+    a.addEventListener("canplay", () => {
+      musicError = false
+      musicErrorListeners.forEach((cb) => cb(true))
+    })
+    musicAudio = a
+    return a
+  } catch {
+    return null
   }
+}
+
+/** Returns true if music started successfully, false if disabled or no file. */
+export function startMusic(): boolean {
+  if (!enabled) return false
+  const a = getMusicAudio()
+  if (!a) return false
+
+  clearFade()
+  a.volume = 0
+  const playPromise = a.play()
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch((e) => {
+      console.warn("[audio] music play() rejected — likely needs a user gesture or file missing", e)
+    })
+  }
+
+  const target = masterVolume
+  const steps = Math.max(1, Math.round(FADE_IN_MS / 50))
+  const step = target / steps
+  fadeTimer = window.setInterval(() => {
+    if (!musicAudio) {
+      clearFade()
+      return
+    }
+    musicAudio.volume = Math.min(target, musicAudio.volume + step)
+    if (musicAudio.volume >= target) clearFade()
+  }, 50)
+  return true
+}
+
+export function stopMusic(): void {
+  if (!musicAudio) return
+  const a = musicAudio
+  clearFade()
+  const startVol = a.volume
+  const steps = Math.max(1, Math.round(FADE_OUT_MS / 50))
+  const step = startVol / steps
+  fadeTimer = window.setInterval(() => {
+    a.volume = Math.max(0, a.volume - step)
+    if (a.volume <= 0.005) {
+      a.pause()
+      a.currentTime = 0
+      a.volume = 0
+      clearFade()
+    }
+  }, 50)
+}
+
+/** Subscribe to load state — true once the music file is playable. */
+export function onMusicLoadState(cb: (loaded: boolean) => void): () => void {
+  musicErrorListeners.add(cb)
+  // Synchronously report current state.
+  const a = getMusicAudio()
+  if (a) {
+    if (musicError) cb(false)
+    else if (a.readyState >= 3) cb(true)
+  }
+  return () => {
+    musicErrorListeners.delete(cb)
+  }
+}
+
+export function getMusicUrl(): string {
+  return MUSIC_URL
 }

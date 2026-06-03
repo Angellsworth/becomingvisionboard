@@ -41,3 +41,8 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+# audio files (large, hosted statically in /public/audio/)
+public/audio/*.mp3
+public/audio/*.wav
+public/audio/*.ogg

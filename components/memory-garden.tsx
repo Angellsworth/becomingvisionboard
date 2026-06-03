@@ -9,7 +9,7 @@ import {
   phaseFor,
   type GardenStats,
 } from "@/lib/data/garden-state"
-import { startAmbient, stopAmbient } from "@/lib/audio/engine"
+import { startMusic, stopMusic, onMusicLoadState } from "@/lib/audio/engine"
 import { useAudio } from "@/components/audio-provider"
 
 /**
@@ -29,6 +29,7 @@ import { useAudio } from "@/components/audio-provider"
  */
 export function MemoryGarden() {
   const [stats, setStats] = useState<GardenStats | null>(null)
+  const [musicLoaded, setMusicLoaded] = useState<boolean | null>(null)
   const { enabled: audioEnabled } = useAudio()
 
   // Compute after mount — keeps SSR and CSR markup consistent.
@@ -36,14 +37,24 @@ export function MemoryGarden() {
     setStats(computeGardenStats())
   }, [])
 
-  // Start/stop the ambient pad with the page and the audio toggle.
+  // Start/stop the music with the page and the audio toggle.
   useEffect(() => {
     if (audioEnabled) {
-      startAmbient()
+      startMusic()
     }
     return () => {
-      stopAmbient()
+      stopMusic()
     }
+  }, [audioEnabled])
+
+  // Watch the music load state so we can show a hint if the file isn't there.
+  useEffect(() => {
+    if (!audioEnabled) {
+      setMusicLoaded(null)
+      return
+    }
+    const unsub = onMusicLoadState((loaded) => setMusicLoaded(loaded))
+    return unsub
   }, [audioEnabled])
 
   const ready = stats !== null
@@ -249,6 +260,17 @@ export function MemoryGarden() {
           {ready ? phase.whisper : "…"}
         </p>
       </div>
+
+      {/* ─── Music hint (only when audio is on and the file isn't loaded) ─── */}
+      {audioEnabled && musicLoaded === false && (
+        <div className="mt-6 rounded-2xl border border-border bg-card/60 backdrop-blur-sm px-5 py-4 text-sm text-foreground/75">
+          <p className="font-serif italic">
+            Music is on but no audio file is loaded. See{" "}
+            <code className="px-1.5 py-0.5 rounded bg-muted/60 text-xs">public/audio/README.md</code>{" "}
+            for where to drop your Vivaldi mp3.
+          </p>
+        </div>
+      )}
 
       {/* ─── Stats ─── */}
       <div className="mt-10 md:mt-14">
