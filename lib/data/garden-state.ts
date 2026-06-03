@@ -21,14 +21,34 @@ export interface GardenPhase {
 }
 
 // Phases in order — find the highest one whose .min is ≤ tokens.
+// The whispers narrate both the house and the garden as they grow together.
 export const PHASES: GardenPhase[] = [
   { min: 0, name: "Quiet", whisper: "A plot of ground. Just beginning." },
-  { min: 2, name: "Stirring", whisper: "Something is starting to root." },
-  { min: 6, name: "Sprouting", whisper: "Small green things, breathing." },
-  { min: 12, name: "Blooming", whisper: "Tending becomes you." },
-  { min: 22, name: "Tended", whisper: "The bees know your name." },
-  { min: 38, name: "Sanctuary", whisper: "A whole garden of you." },
+  { min: 2, name: "Stirring", whisper: "A first stone. Something is rooting." },
+  { min: 6, name: "Sprouting", whisper: "Walls finding their shape. Green things, breathing." },
+  { min: 12, name: "Blooming", whisper: "A roof. A door. Tending becomes you." },
+  { min: 22, name: "Tended", whisper: "Windows lit. The bees know your name." },
+  { min: 38, name: "Sanctuary", whisper: "Smoke from the chimney. A whole life of you." },
 ]
+
+/**
+ * House construction stages keyed to token thresholds.
+ * Each stage adds detail without un-drawing earlier detail.
+ *   0 — foundation only (a plinth in the garden)
+ *   1 — low walls + door frame
+ *   2 — full walls + door + knob
+ *   3 — roof
+ *   4 — chimney + first window
+ *   5 — smoke + second window + vines on the walls
+ */
+export function houseStageFor(tokens: number): number {
+  if (tokens >= 38) return 5
+  if (tokens >= 22) return 4
+  if (tokens >= 12) return 3
+  if (tokens >= 6) return 2
+  if (tokens >= 2) return 1
+  return 0
+}
 
 export function phaseFor(tokens: number): GardenPhase {
   let result = PHASES[0]
