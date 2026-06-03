@@ -1,38 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Sparkles } from "lucide-react"
-import { useYear } from "@/components/year-provider"
-import { keys } from "@/lib/year"
+import { useDirection } from "@/lib/data/hooks"
 
 interface BecomingDirectionProps {
   month: string
 }
 
 export function BecomingDirection({ month }: BecomingDirectionProps) {
-  const { year, ready } = useYear()
-  const storageKey = keys.direction(month, year)
-
-  const [direction, setDirection] = useState("")
+  const { direction, setDirection } = useDirection(month)
   const [isEditing, setIsEditing] = useState(false)
-  const [hydrated, setHydrated] = useState(false)
-
-  useEffect(() => {
-    if (!ready) return
-    setHydrated(false)
-    try {
-      const saved = localStorage.getItem(storageKey)
-      setDirection(saved ?? "")
-    } catch {
-      setDirection("")
-    }
-    setHydrated(true)
-  }, [storageKey, ready])
-
-  useEffect(() => {
-    if (!hydrated) return
-    localStorage.setItem(storageKey, direction)
-  }, [direction, storageKey, hydrated])
 
   return (
     <div className="max-w-3xl mx-auto">

@@ -4,50 +4,18 @@ import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useYear } from "@/components/year-provider"
-import { keys } from "@/lib/year"
-
-interface CollageImage {
-  id: string
-  url: string
-  x: number
-  y: number
-  width: number
-  height: number
-  rotation: number
-  zIndex: number
-}
+import { useMonthlyCollageData } from "@/lib/data/hooks"
+import type { CollageImage } from "@/lib/data/types"
 
 interface MonthlyCollageProps {
   month: string
 }
 
 export function MonthlyCollage({ month }: MonthlyCollageProps) {
-  const { year, ready } = useYear()
-  const storageKey = keys.monthlyCollage(month, year)
-
-  const [images, setImages] = useState<CollageImage[]>([])
+  const { images, setImages } = useMonthlyCollageData(month)
   const [isDragOver, setIsDragOver] = useState(false)
-  const [hydrated, setHydrated] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!ready) return
-    setHydrated(false)
-    try {
-      const saved = localStorage.getItem(storageKey)
-      setImages(saved ? JSON.parse(saved) : [])
-    } catch {
-      setImages([])
-    }
-    setHydrated(true)
-  }, [storageKey, ready])
-
-  useEffect(() => {
-    if (!hydrated) return
-    localStorage.setItem(storageKey, JSON.stringify(images))
-  }, [images, storageKey, hydrated])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -57,17 +25,22 @@ export function MonthlyCollage({ month }: MonthlyCollageProps) {
     e.preventDefault()
     setIsDragOver(false)
   }, [])
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
-    if (files.length > 0) addImages(files)
-  }, [])
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragOver(false)
+      const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+      if (files.length > 0) addImages(files)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [],
+  )
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith("image/"))
     if (files.length > 0) addImages(files)
     e.target.value = ""
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const addImages = (files: File[]) => {
@@ -92,20 +65,26 @@ export function MonthlyCollage({ month }: MonthlyCollageProps) {
 
   const removeImage = (id: string) => setImages((prev) => prev.filter((img) => img.id !== id))
 
-  const updateImagePosition = useCallback((id: string, x: number, y: number) => {
-    setImages((prev) =>
-      prev.map((img) =>
-        img.id === id ? { ...img, x: Math.max(0, Math.min(80, x)), y: Math.max(0, Math.min(80, y)) } : img,
-      ),
-    )
-  }, [])
+  const updateImagePosition = useCallback(
+    (id: string, x: number, y: number) => {
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, x: Math.max(0, Math.min(80, x)), y: Math.max(0, Math.min(80, y)) } : img,
+        ),
+      )
+    },
+    [setImages],
+  )
 
-  const bringToFront = useCallback((id: string) => {
-    setImages((prev) => {
-      const max = prev.reduce((m, i) => Math.max(m, i.zIndex), 0)
-      return prev.map((img) => (img.id === id ? { ...img, zIndex: max + 1 } : img))
-    })
-  }, [])
+  const bringToFront = useCallback(
+    (id: string) => {
+      setImages((prev) => {
+        const max = prev.reduce((m, i) => Math.max(m, i.zIndex), 0)
+        return prev.map((img) => (img.id === id ? { ...img, zIndex: max + 1 } : img))
+      })
+    },
+    [setImages],
+  )
 
   return (
     <div>

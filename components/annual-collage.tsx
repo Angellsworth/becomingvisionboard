@@ -5,58 +5,34 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useYear } from "@/components/year-provider"
-import { keys } from "@/lib/year"
-
-interface CollageImage {
-  id: string
-  url: string
-  x: number
-  y: number
-  width: number
-  height: number
-  rotation: number
-  zIndex: number
-}
+import { useAnnualCollage } from "@/lib/data/hooks"
+import type { CollageImage } from "@/lib/data/types"
 
 export function AnnualCollage() {
-  const { year, ready } = useYear()
-  const storageKey = keys.annualCollage(year)
-  const themeKey = keys.annualTheme(year)
+  const { year } = useYear()
+  const { data, save } = useAnnualCollage(year)
 
-  const [images, setImages] = useState<CollageImage[]>([])
-  const [annualTheme, setAnnualTheme] = useState("Transformation")
   const [isDragOver, setIsDragOver] = useState(false)
   const [editingTheme, setEditingTheme] = useState(false)
-  const [hydrated, setHydrated] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
 
-  // Reload from localStorage whenever the active year changes
-  useEffect(() => {
-    if (!ready) return
-    setHydrated(false)
-    try {
-      const savedImages = localStorage.getItem(storageKey)
-      const savedTheme = localStorage.getItem(themeKey)
-      setImages(savedImages ? JSON.parse(savedImages) : [])
-      setAnnualTheme(savedTheme ?? "Transformation")
-    } catch {
-      setImages([])
-      setAnnualTheme("Transformation")
-    }
-    setHydrated(true)
-  }, [storageKey, themeKey, ready])
+  const setImages = useCallback(
+    (next: CollageImage[] | ((prev: CollageImage[]) => CollageImage[])) => {
+      save((prev) => ({
+        ...prev,
+        images: typeof next === "function" ? next(prev.images) : next,
+      }))
+    },
+    [save],
+  )
 
-  // Persist on change (after hydration so we don't overwrite saved data with defaults)
-  useEffect(() => {
-    if (!hydrated) return
-    localStorage.setItem(storageKey, JSON.stringify(images))
-  }, [images, hydrated, storageKey])
-
-  useEffect(() => {
-    if (!hydrated) return
-    localStorage.setItem(themeKey, annualTheme)
-  }, [annualTheme, hydrated, themeKey])
+  const setAnnualTheme = useCallback(
+    (theme: string) => {
+      save((prev) => ({ ...prev, theme }))
+    },
+    [save],
+  )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -68,18 +44,22 @@ export function AnnualCollage() {
     setIsDragOver(false)
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    const files = Array.from(e.dataTransfer.files).filter((file) => file.type.startsWith("image/"))
-    if (files.length > 0) addImages(files)
-  }, [])
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragOver(false)
+      const files = Array.from(e.dataTransfer.files).filter((file) => file.type.startsWith("image/"))
+      if (files.length > 0) addImages(files)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).filter((file) => file.type.startsWith("image/"))
     if (files.length > 0) addImages(files)
-    // reset so the same file can be re-selected
     e.target.value = ""
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const addImages = (files: File[]) => {
@@ -104,20 +84,29 @@ export function AnnualCollage() {
 
   const removeImage = (id: string) => setImages((prev) => prev.filter((img) => img.id !== id))
 
-  const updateImagePosition = useCallback((id: string, x: number, y: number) => {
-    setImages((prev) =>
-      prev.map((img) =>
-        img.id === id ? { ...img, x: Math.max(0, Math.min(85, x)), y: Math.max(0, Math.min(85, y)) } : img,
-      ),
-    )
-  }, [])
+  const updateImagePosition = useCallback(
+    (id: string, x: number, y: number) => {
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, x: Math.max(0, Math.min(85, x)), y: Math.max(0, Math.min(85, y)) } : img,
+        ),
+      )
+    },
+    [setImages],
+  )
 
-  const bringToFront = useCallback((id: string) => {
-    setImages((prev) => {
-      const max = prev.reduce((m, i) => Math.max(m, i.zIndex), 0)
-      return prev.map((img) => (img.id === id ? { ...img, zIndex: max + 1 } : img))
-    })
-  }, [])
+  const bringToFront = useCallback(
+    (id: string) => {
+      setImages((prev) => {
+        const max = prev.reduce((m, i) => Math.max(m, i.zIndex), 0)
+        return prev.map((img) => (img.id === id ? { ...img, zIndex: max + 1 } : img))
+      })
+    },
+    [setImages],
+  )
+
+  const images = data.images
+  const annualTheme = data.theme
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-paper via-grape-soda/10 to-pacific-blue/15">
@@ -226,7 +215,6 @@ interface CollageImageItemProps {
 
 function CollageImageItem({ image, canvasRef, onRemove, onUpdatePosition, onActivate }: CollageImageItemProps) {
   const [isDragging, setIsDragging] = useState(false)
-  // Offset between the pointer and the image's top-left corner, in canvas %.
   const dragOffsetRef = useRef({ offsetX: 0, offsetY: 0 })
 
   const startDrag = useCallback(
@@ -234,7 +222,6 @@ function CollageImageItem({ image, canvasRef, onRemove, onUpdatePosition, onActi
       const canvas = canvasRef.current
       if (!canvas) return
       const rect = canvas.getBoundingClientRect()
-      // pointer position in % of canvas
       const px = ((clientX - rect.left) / rect.width) * 100
       const py = ((clientY - rect.top) / rect.height) * 100
       dragOffsetRef.current = { offsetX: px - image.x, offsetY: py - image.y }
@@ -244,10 +231,8 @@ function CollageImageItem({ image, canvasRef, onRemove, onUpdatePosition, onActi
     [canvasRef, image.x, image.y, image.id, onActivate],
   )
 
-  // Mouse drag
   useEffect(() => {
     if (!isDragging) return
-
     const handleMove = (e: MouseEvent) => {
       const canvas = canvasRef.current
       if (!canvas) return

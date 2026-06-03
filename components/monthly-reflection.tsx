@@ -1,42 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react"
-import { useYear } from "@/components/year-provider"
-import { keys } from "@/lib/year"
+import { useReflection } from "@/lib/data/hooks"
 
 interface MonthlyReflectionProps {
   month: string
 }
 
 export function MonthlyReflection({ month }: MonthlyReflectionProps) {
-  const { year, ready } = useYear()
-  const storageKey = keys.reflection(month, year)
-
+  const { reflection, setReflection } = useReflection(month)
   const [isOpen, setIsOpen] = useState(false)
-  const [reflections, setReflections] = useState({
-    helped: "",
-    resisted: "",
-    adjust: "",
-  })
-  const [hydrated, setHydrated] = useState(false)
-
-  useEffect(() => {
-    if (!ready) return
-    setHydrated(false)
-    try {
-      const saved = localStorage.getItem(storageKey)
-      setReflections(saved ? JSON.parse(saved) : { helped: "", resisted: "", adjust: "" })
-    } catch {
-      setReflections({ helped: "", resisted: "", adjust: "" })
-    }
-    setHydrated(true)
-  }, [storageKey, ready])
-
-  useEffect(() => {
-    if (!hydrated) return
-    localStorage.setItem(storageKey, JSON.stringify(reflections))
-  }, [reflections, storageKey, hydrated])
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -60,8 +34,8 @@ export function MonthlyReflection({ month }: MonthlyReflectionProps) {
           <div>
             <label className="block font-serif text-lg text-bronze-brown mb-2">What helped?</label>
             <textarea
-              value={reflections.helped}
-              onChange={(e) => setReflections({ ...reflections, helped: e.target.value })}
+              value={reflection.helped}
+              onChange={(e) => setReflection((prev) => ({ ...prev, helped: e.target.value }))}
               placeholder="The practices, patterns, or support that made a difference..."
               className="w-full px-4 py-3 bg-paper border border-bronze-brown/20 rounded-md focus:outline-none focus:ring-2 focus:ring-branded-melon/50 text-ink leading-relaxed resize-none"
               rows={3}
@@ -71,8 +45,8 @@ export function MonthlyReflection({ month }: MonthlyReflectionProps) {
           <div>
             <label className="block font-serif text-lg text-bronze-brown mb-2">What resisted?</label>
             <textarea
-              value={reflections.resisted}
-              onChange={(e) => setReflections({ ...reflections, resisted: e.target.value })}
+              value={reflection.resisted}
+              onChange={(e) => setReflection((prev) => ({ ...prev, resisted: e.target.value }))}
               placeholder="The challenges, obstacles, or patterns that came up..."
               className="w-full px-4 py-3 bg-paper border border-bronze-brown/20 rounded-md focus:outline-none focus:ring-2 focus:ring-branded-melon/50 text-ink leading-relaxed resize-none"
               rows={3}
@@ -82,8 +56,8 @@ export function MonthlyReflection({ month }: MonthlyReflectionProps) {
           <div>
             <label className="block font-serif text-lg text-bronze-brown mb-2">What do I want to adjust?</label>
             <textarea
-              value={reflections.adjust}
-              onChange={(e) => setReflections({ ...reflections, adjust: e.target.value })}
+              value={reflection.adjust}
+              onChange={(e) => setReflection((prev) => ({ ...prev, adjust: e.target.value }))}
               placeholder="Changes, experiments, or shifts to try..."
               className="w-full px-4 py-3 bg-paper border border-bronze-brown/20 rounded-md focus:outline-none focus:ring-2 focus:ring-branded-melon/50 text-ink leading-relaxed resize-none"
               rows={3}

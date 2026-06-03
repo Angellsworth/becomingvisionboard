@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter, Cormorant_Garamond } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { YearProvider } from "@/components/year-provider"
+import { AuthProvider } from "@/components/auth-provider"
 import "./globals.css"
 
 const inter = Inter({
@@ -46,7 +47,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className={`font-sans antialiased`}>
-        <YearProvider>{children}</YearProvider>
+        <AuthProvider>
+          <YearProvider>{children}</YearProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

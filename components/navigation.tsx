@@ -4,46 +4,21 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Home, Calendar, CalendarDays, LogOut, Menu, X } from "lucide-react"
-import { useEffect, useState } from "react"
-import { createBrowserClient, hasSupabaseEnv } from "@/lib/supabase/client"
-import type { User } from "@supabase/supabase-js"
+import { useState } from "react"
 import { useYear } from "@/components/year-provider"
 import { YearSelector } from "@/components/year-selector"
+import { useAuth } from "@/components/auth-provider"
 
 export function Navigation() {
   const pathname = usePathname()
-  const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const authEnabled = hasSupabaseEnv()
+  const { user, authEnabled, signOut } = useAuth()
   const { year } = useYear()
-
-  useEffect(() => {
-    if (!authEnabled) return
-    const supabase = createBrowserClient()
-    if (!supabase) return
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [authEnabled])
 
   // When auth is disabled (no env vars), treat the user as signed-in so the
   // app's main features are accessible — localStorage is the data store.
   const showAppLinks = !authEnabled || Boolean(user)
-
-  const handleLogout = async () => {
-    const supabase = createBrowserClient()
-    if (supabase) await supabase.auth.signOut()
-    window.location.href = "/"
-  }
+  const handleLogout = () => signOut()
 
   const isActive = (path: string) => pathname === path
 
